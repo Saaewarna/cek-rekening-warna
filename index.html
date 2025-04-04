@@ -1,27 +1,27 @@
 <!DOCTYPE html>
 <html lang="id">
 <head>
-  <meta charset="UTF-8">
-  <title>Cek Rekening - RapidAPI</title>
+  <meta charset="UTF-8" />
+  <title>Cek Wallet e-Money</title>
   <script src="https://cdn.tailwindcss.com"></script>
 </head>
 <body class="min-h-screen bg-gray-100 flex items-center justify-center p-6">
   <div class="bg-white p-8 rounded-xl shadow-xl w-full max-w-md">
-    <h2 class="text-2xl font-bold mb-4 text-center text-indigo-600">🔍 Cek Info Rekening</h2>
+    <h2 class="text-2xl font-bold mb-4 text-center text-indigo-600">🔍 Cek Wallet e-Money</h2>
 
-<select id="bank" class="w-full p-2 mb-4 border rounded focus:outline-none focus:ring-2 focus:ring-indigo-400">
-  <option value="">-- Pilih Wallet --</option>
-  <option value="dana">DANA</option>
-  <option value="ovo">OVO</option>
-  <option value="gopay">GOPAY</option>
-  <option value="shopee">ShopeePay</option>
-  <option value="linkaja">LinkAja</option>
-</select>
+    <label for="wallet" class="block font-semibold mb-1">Pilih Wallet:</label>
+    <select id="wallet" class="w-full p-2 mb-4 border rounded focus:outline-none focus:ring-2 focus:ring-indigo-400">
+      <option value="">-- Pilih Wallet --</option>
+      <option value="dana">DANA</option>
+      <option value="ovo">OVO</option>
+      <option value="gopay">GOPAY</option>
+      <option value="shopee">ShopeePay</option>
+      <option value="linkaja">LinkAja</option>
+    </select>
 
-
-    <label for="rekening" class="block font-semibold mb-1">Nomor Rekening:</label>
-    <input type="text" id="rekening" placeholder="Masukkan nomor rekening"
-           class="w-full p-2 mb-4 border rounded focus:outline-none focus:ring-2 focus:ring-indigo-400">
+    <label for="rekening" class="block font-semibold mb-1">Nomor HP Wallet:</label>
+    <input type="text" id="rekening" placeholder="Contoh: 08xxxxxxxxxx"
+      class="w-full p-2 mb-4 border rounded focus:outline-none focus:ring-2 focus:ring-indigo-400" />
 
     <button onclick="cekRekening()" class="w-full bg-indigo-500 text-white py-2 rounded hover:bg-indigo-600 transition-all duration-200">
       Cek Sekarang
@@ -32,47 +32,46 @@
   </div>
 
   <script>
-<script>
-async function cekRekening() {
-  const walletNumber = document.getElementById("rekening").value;
-  const walletType = document.getElementById("bank").value; // e.g. "dana", "ovo"
-  const hasil = document.getElementById("hasil");
+    async function cekRekening() {
+      const walletType = document.getElementById("wallet").value;
+      const walletNumber = document.getElementById("rekening").value;
+      const hasil = document.getElementById("hasil");
 
-  if (!walletNumber || !walletType) {
-    hasil.textContent = "Mohon isi semua data.";
-    return;
-  }
-
-  hasil.textContent = "⏳ Sedang mengecek...";
-
-  const url = `https://check-id-ovo-gopay-shopee-linkaja-dana.p.rapidapi.com/cek_ewallet/${walletNumber}/${walletType}`;
-
-  try {
-    const response = await fetch(url, {
-      method: "GET",
-      headers: {
-        "x-rapidapi-key": "fecb5eb343msh5c49bd1c108f9ccp1212b6jsnc8457e96ba7a",
-        "x-rapidapi-host": "check-id-ovo-gopay-shopee-linkaja-dana.p.rapidapi.com"
+      if (!walletType || !walletNumber) {
+        hasil.textContent = "Mohon isi semua data.";
+        return;
       }
-    });
 
-    const json = await response.json();
-    console.log("📦 RESPONSE:", json);
+      hasil.textContent = "⏳ Sedang mengecek...";
 
-    if (json?.status === true && json?.data?.nama) {
-      hasil.textContent =
-        `✅ Wallet ditemukan:\n\n` +
-        `💼 Tipe: ${walletType.toUpperCase()}\n` +
-        `📱 Nomor: ${walletNumber}\n` +
-        `👤 Nama: ${json.data.nama}`;
-    } else {
-      hasil.textContent = `❌ Tidak ditemukan atau tidak valid.`;
+      const url = `https://check-id-ovo-gopay-shopee-linkaja-dana.p.rapidapi.com/cek_ewallet/${walletNumber}/${walletType}`;
+
+      try {
+        const response = await fetch(url, {
+          method: "GET",
+          headers: {
+            "x-rapidapi-key": "fecb5eb343msh5c49bd1c108f9ccp1212b6jsnc8457e96ba7a",
+            "x-rapidapi-host": "check-id-ovo-gopay-shopee-linkaja-dana.p.rapidapi.com"
+          }
+        });
+
+        const json = await response.json();
+        console.log("📦 DEBUG:", json);
+
+        if (json?.status === true && json?.data?.nama) {
+          hasil.textContent =
+            `✅ Wallet ditemukan:\n\n` +
+            `💼 Provider: ${walletType.toUpperCase()}\n` +
+            `📱 Nomor: ${walletNumber}\n` +
+            `👤 Nama: ${json.data.nama}`;
+        } else {
+          hasil.textContent = `❌ Tidak ditemukan atau tidak valid.`;
+        }
+      } catch (err) {
+        console.error("🔥 ERROR:", err);
+        hasil.textContent = "❌ Gagal menghubungi API.";
+      }
     }
-  } catch (err) {
-    console.error("🔥 ERROR:", err);
-    hasil.textContent = "❌ Gagal menghubungi API RapidAPI.";
-  }
-}
-</script>
+  </script>
 </body>
 </html>
