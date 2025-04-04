@@ -10,18 +10,18 @@
     <h2 class="text-2xl font-bold mb-4 text-center text-indigo-600">🔍 Cek Info Rekening</h2>
 
     <label for="bank" class="block font-semibold mb-1">Pilih Bank:</label>
-    <select id="bank" class="w-full p-2 mb-4 border rounded focus:outline-none focus:ring-2 focus:ring-indigo-400">
-      <option value="">-- Pilih Bank --</option>
-      <option value="bank_mandiri">Bank Mandiri</option>
-      <option value="bca">Bank Central Asia (BCA)</option>
-      <option value="bni">Bank Negara Indonesia (BNI)</option>
-      <option value="bri">Bank Rakyat Indonesia (BRI)</option>
-      <option value="cimb">Bank CIMB Niaga</option>
-      <option value="danamon">Bank Danamon</option>
-      <option value="dana">DANA</option>
-      <option value="ovo">OVO</option>
-      <!-- Tambah manual kalau perlu -->
-    </select>
+  <select id="bank" class="w-full p-2 mb-4 border rounded focus:outline-none focus:ring-2 focus:ring-indigo-400">
+  <option value="">-- Pilih Bank --</option>
+  <option value="bank_mandiri">Bank Mandiri</option>
+  <option value="bca">Bank Central Asia (BCA)</option>
+  <option value="bni">Bank Negara Indonesia (BNI)</option>
+  <option value="bri">Bank Rakyat Indonesia (BRI)</option>
+  <option value="cimb">Bank CIMB Niaga</option>
+  <option value="danamon">Bank Danamon</option>
+  <option value="dana">DANA</option>
+  <option value="ovo">OVO</option>
+  </select>
+
 
     <label for="rekening" class="block font-semibold mb-1">Nomor Rekening:</label>
     <input type="text" id="rekening" placeholder="Masukkan nomor rekening"
@@ -36,44 +36,47 @@
   </div>
 
   <script>
-    async function cekRekening() {
-      const bankCode = document.getElementById("bank").value;
-      const accountNumber = document.getElementById("rekening").value;
-      const hasil = document.getElementById("hasil");
+<script>
+async function cekRekening() {
+  const bankCode = document.getElementById("bank").value;
+  const accountNumber = document.getElementById("rekening").value;
+  const hasil = document.getElementById("hasil");
 
-      if (!accountNumber || !bankCode) {
-        hasil.textContent = "Mohon isi semua data.";
-        return;
+  if (!accountNumber || !bankCode) {
+    hasil.textContent = "Mohon isi semua data.";
+    return;
+  }
+
+  hasil.textContent = "⏳ Sedang mengecek...";
+
+  const url = `https://cek-nomor-rekening-bank.p.rapidapi.com/check_bank_lq/${bankCode}/${accountNumber}`;
+
+  try {
+    const response = await fetch(url, {
+      method: "GET",
+      headers: {
+        "x-rapidapi-key": "fecb5eb343msh5c49bd1c108f9ccp1212b6jsnc8457e96ba7a",
+        "x-rapidapi-host": "cek-nomor-rekening-bank.p.rapidapi.com"
       }
+    });
 
-      hasil.textContent = "⏳ Sedang mengecek...";
+    const json = await response.json();
+    console.log("🔍 DEBUG RESPONSE:", json); // << DEBUG
 
-      const url = `https://cek-nomor-rekening-bank.p.rapidapi.com/check_bank_lq/${bankCode}/${accountNumber}`;
-
-      try {
-        const response = await fetch(url, {
-          method: "GET",
-          headers: {
-            "x-rapidapi-key": "fecb5eb343msh5c49bd1c108f9ccp1212b6jsnc8457e96ba7a",
-            "x-rapidapi-host": "cek-nomor-rekening-bank.p.rapidapi.com"
-          }
-        });
-
-        const json = await response.json();
-
-        if (json?.data?.nama) {
-          hasil.textContent =
-            `✅ Rekening ditemukan:\n\n` +
-            `🏦 Bank: ${bankCode.toUpperCase()}\n` +
-            `🔢 Rekening: ${accountNumber}\n` +
-            `👤 Nama: ${json.data.nama}`;
-        } else {
-          hasil.textContent = `❌ Tidak ditemukan atau tidak valid.`;
-        }
-      } catch (error) {
-        hasil.textContent = "❌ Gagal menghubungi API RapidAPI.";
-      }
+    if (json?.data?.nama) {
+      hasil.textContent =
+        `✅ Rekening ditemukan:\n\n` +
+        `🏦 Bank: ${bankCode.toUpperCase()}\n` +
+        `🔢 Rekening: ${accountNumber}\n` +
+        `👤 Nama: ${json.data.nama}`;
+    } else {
+      hasil.textContent = `❌ ${json.message || "Tidak ditemukan atau tidak valid."}`;
     }
-  </script>
+  } catch (error) {
+    console.error("🔥 ERROR:", error); // << DEBUG
+    hasil.textContent = "❌ Gagal menghubungi API RapidAPI.";
+  }
+}
+</script>
 </body>
 </html>
