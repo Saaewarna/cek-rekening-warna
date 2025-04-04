@@ -16,6 +16,11 @@
     <input type="text" id="rekening" placeholder="Masukkan nomor rekening"
            class="w-full p-2 mb-4 border rounded focus:outline-none focus:ring-2 focus:ring-indigo-400">
 
+    <label class="flex items-center gap-2 mb-4">
+  <input type="checkbox" id="demoMode" class="accent-indigo-500">
+  <span class="text-sm text-gray-700">Aktifkan Demo Mode (tidak gunakan saldo)</span>
+</label>
+
     <button onclick="cekRekening()" class="w-full bg-indigo-500 text-white py-2 rounded hover:bg-indigo-600 transition-all duration-200">
       Cek Sekarang
     </button>
@@ -64,17 +69,19 @@
       hasil.textContent = "⏳ Sedang mengecek...";
 
       try {
-        const res = await fetch("/api/inquiry", {
-            method: "POST",
-            headers: {
-            "Content-Type": "application/json"
-             },
-             body: JSON.stringify({
-              bankCode: bankCode,
-               accountNumber: accountNumber
-                 })
-                  });
+const demoMode = document.getElementById("demoMode").checked;
 
+const res = await fetch("/api/inquiry", {
+  method: "POST",
+  headers: {
+    "Content-Type": "application/json"
+  },
+  body: JSON.stringify({
+    bankCode: bankCode,
+    accountNumber: accountNumber,
+    demoMode: demoMode
+  })
+});
 
         const json = await res.json();
 
