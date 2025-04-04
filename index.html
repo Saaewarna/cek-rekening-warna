@@ -56,49 +56,45 @@
     }
 
     // Cek rekening
-    async function cekRekening() {
-      const bankCode = document.getElementById("bank").value;
-      const accountNumber = document.getElementById("rekening").value;
-      const hasil = document.getElementById("hasil");
+async function cekRekening() {
+  const bankCode = document.getElementById("bank").value; // contoh: "bank_mandiri"
+  const accountNumber = document.getElementById("rekening").value;
+  const hasil = document.getElementById("hasil");
 
-      if (!accountNumber || !bankCode) {
-        hasil.textContent = "Mohon isi semua data.";
-        return;
+  if (!accountNumber || !bankCode) {
+    hasil.textContent = "Mohon isi semua data.";
+    return;
+  }
+
+  hasil.textContent = "⏳ Sedang mengecek...";
+
+  const url = `https://cek-nomor-rekening-bank.p.rapidapi.com/check_bank_lq/${bankCode}/${accountNumber}`;
+
+  try {
+    const response = await fetch(url, {
+      method: "GET",
+      headers: {
+        "x-rapidapi-key": "fecb5eb343msh5c49bd1c108f9ccp1212b6jsnc8457e96ba7a",
+        "x-rapidapi-host": "cek-nomor-rekening-bank.p.rapidapi.com"
       }
+    });
 
-      hasil.textContent = "⏳ Sedang mengecek...";
+    const json = await response.json();
 
-      try {
-const demoMode = document.getElementById("demoMode").checked;
-
-const res = await fetch("/api/inquiry", {
-  method: "POST",
-  headers: {
-    "Content-Type": "application/json"
-  },
-  body: JSON.stringify({
-    bankCode: bankCode,
-    accountNumber: accountNumber,
-    demoMode: demoMode
-  })
-});
-
-        const json = await res.json();
-
-        if (json.status === 200) {
-          hasil.textContent =
-            `✅ Rekening ditemukan:\n\n` +
-            `🏦 Bank: ${json.data.bank}\n` +
-            `🔢 Rekening: ${json.data.rekening}\n` +
-            `👤 Nama: ${json.data.name}\n` +
-            `💰 Saldo: ${json.data.saldo}`;
-        } else {
-          hasil.textContent = `❌ ${json.message || "Rekening tidak ditemukan."}`;
-        }
-      } catch (err) {
-        hasil.textContent = "❌ Terjadi kesalahan saat menghubungi server.";
-      }
+    if (json?.data?.nama) {
+      hasil.textContent =
+        `✅ Rekening ditemukan:\n\n` +
+        `🏦 Bank: ${bankCode.toUpperCase()}\n` +
+        `🔢 Rekening: ${accountNumber}\n` +
+        `👤 Nama: ${json.data.nama}`;
+    } else {
+      hasil.textContent = `❌ Tidak ditemukan atau tidak valid.`;
     }
+  } catch (error) {
+    hasil.textContent = "❌ Gagal menghubungi API RapidAPI.";
+  }
+}
+
 
     // Load bank saat halaman dibuka
     getBankList();
