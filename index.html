@@ -10,17 +10,14 @@
     <h2 class="text-2xl font-bold mb-4 text-center text-indigo-600">🔍 Cek Info Rekening</h2>
 
     <label for="bank" class="block font-semibold mb-1">Pilih Bank:</label>
-  <select id="bank" class="w-full p-2 mb-4 border rounded focus:outline-none focus:ring-2 focus:ring-indigo-400">
-  <option value="">-- Pilih Bank --</option>
-  <option value="bank_mandiri">Bank Mandiri</option>
-  <option value="bca">Bank Central Asia (BCA)</option>
-  <option value="bni">Bank Negara Indonesia (BNI)</option>
-  <option value="bri">Bank Rakyat Indonesia (BRI)</option>
-  <option value="cimb">Bank CIMB Niaga</option>
-  <option value="danamon">Bank Danamon</option>
+<select id="bank" class="w-full p-2 mb-4 border rounded focus:outline-none focus:ring-2 focus:ring-indigo-400">
+  <option value="">-- Pilih Wallet --</option>
   <option value="dana">DANA</option>
   <option value="ovo">OVO</option>
-  </select>
+  <option value="gopay">GOPAY</option>
+  <option value="shopee">ShopeePay</option>
+  <option value="linkaja">LinkAja</option>
+</select>
 
 
     <label for="rekening" class="block font-semibold mb-1">Nomor Rekening:</label>
@@ -38,42 +35,42 @@
   <script>
 <script>
 async function cekRekening() {
-  const bankCode = document.getElementById("bank").value;
-  const accountNumber = document.getElementById("rekening").value;
+  const walletNumber = document.getElementById("rekening").value;
+  const walletType = document.getElementById("bank").value; // e.g. "dana", "ovo"
   const hasil = document.getElementById("hasil");
 
-  if (!accountNumber || !bankCode) {
+  if (!walletNumber || !walletType) {
     hasil.textContent = "Mohon isi semua data.";
     return;
   }
 
   hasil.textContent = "⏳ Sedang mengecek...";
 
-  const url = `https://cek-nomor-rekening-bank.p.rapidapi.com/check_bank_lq/${bankCode}/${accountNumber}`;
+  const url = `https://check-id-ovo-gopay-shopee-linkaja-dana.p.rapidapi.com/cek_ewallet/${walletNumber}/${walletType}`;
 
   try {
     const response = await fetch(url, {
       method: "GET",
       headers: {
         "x-rapidapi-key": "fecb5eb343msh5c49bd1c108f9ccp1212b6jsnc8457e96ba7a",
-        "x-rapidapi-host": "cek-nomor-rekening-bank.p.rapidapi.com"
+        "x-rapidapi-host": "check-id-ovo-gopay-shopee-linkaja-dana.p.rapidapi.com"
       }
     });
 
     const json = await response.json();
-    console.log("🔍 DEBUG RESPONSE:", json); // << DEBUG
+    console.log("📦 RESPONSE:", json);
 
-    if (json?.data?.nama) {
+    if (json?.status === true && json?.data?.nama) {
       hasil.textContent =
-        `✅ Rekening ditemukan:\n\n` +
-        `🏦 Bank: ${bankCode.toUpperCase()}\n` +
-        `🔢 Rekening: ${accountNumber}\n` +
+        `✅ Wallet ditemukan:\n\n` +
+        `💼 Tipe: ${walletType.toUpperCase()}\n` +
+        `📱 Nomor: ${walletNumber}\n` +
         `👤 Nama: ${json.data.nama}`;
     } else {
-      hasil.textContent = `❌ ${json.message || "Tidak ditemukan atau tidak valid."}`;
+      hasil.textContent = `❌ Tidak ditemukan atau tidak valid.`;
     }
-  } catch (error) {
-    console.error("🔥 ERROR:", error); // << DEBUG
+  } catch (err) {
+    console.error("🔥 ERROR:", err);
     hasil.textContent = "❌ Gagal menghubungi API RapidAPI.";
   }
 }
