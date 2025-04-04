@@ -67,8 +67,9 @@
         const res = await fetch("https://storepanda.web.id/api/inquiry", {
           method: "POST",
           headers: {
-            "Authorization": `Bearer ${API_KEY}`,
-            "Content-Type": "application/json"
+          "Authorization": `Bearer ${59|duOPH8HB155IQ7xmfzhVXhngOvniL08APtCqswX8bae08bd5}`,
+          "Content-Type": "application/json",
+          "Accept": "application/json" // <--- INI YANG KURANG!
           },
           body: JSON.stringify({
             bankCode: bankCode,
