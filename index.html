@@ -2,24 +2,30 @@
 <html lang="id">
 <head>
   <meta charset="UTF-8">
-  <title>Cek Rekening - Storepanda</title>
-  <script src="https://cdn.tailwindcss.com"></script> <!-- TailwindCSS CDN -->
+  <title>Cek Rekening - RapidAPI</title>
+  <script src="https://cdn.tailwindcss.com"></script>
 </head>
 <body class="min-h-screen bg-gray-100 flex items-center justify-center p-6">
   <div class="bg-white p-8 rounded-xl shadow-xl w-full max-w-md">
     <h2 class="text-2xl font-bold mb-4 text-center text-indigo-600">🔍 Cek Info Rekening</h2>
 
     <label for="bank" class="block font-semibold mb-1">Pilih Bank:</label>
-    <select id="bank" class="w-full p-2 mb-4 border rounded focus:outline-none focus:ring-2 focus:ring-indigo-400"></select>
+    <select id="bank" class="w-full p-2 mb-4 border rounded focus:outline-none focus:ring-2 focus:ring-indigo-400">
+      <option value="">-- Pilih Bank --</option>
+      <option value="bank_mandiri">Bank Mandiri</option>
+      <option value="bca">Bank Central Asia (BCA)</option>
+      <option value="bni">Bank Negara Indonesia (BNI)</option>
+      <option value="bri">Bank Rakyat Indonesia (BRI)</option>
+      <option value="cimb">Bank CIMB Niaga</option>
+      <option value="danamon">Bank Danamon</option>
+      <option value="dana">DANA</option>
+      <option value="ovo">OVO</option>
+      <!-- Tambah manual kalau perlu -->
+    </select>
 
     <label for="rekening" class="block font-semibold mb-1">Nomor Rekening:</label>
     <input type="text" id="rekening" placeholder="Masukkan nomor rekening"
            class="w-full p-2 mb-4 border rounded focus:outline-none focus:ring-2 focus:ring-indigo-400">
-
-    <label class="flex items-center gap-2 mb-4">
-  <input type="checkbox" id="demoMode" class="accent-indigo-500">
-  <span class="text-sm text-gray-700">Aktifkan Demo Mode (tidak gunakan saldo)</span>
-</label>
 
     <button onclick="cekRekening()" class="w-full bg-indigo-500 text-white py-2 rounded hover:bg-indigo-600 transition-all duration-200">
       Cek Sekarang
@@ -30,74 +36,44 @@
   </div>
 
   <script>
-    const API_KEY = "59|duOPH8HB155IQ7xmfzhVXhngOvniL08APtCqswX8bae08bd5";
+    async function cekRekening() {
+      const bankCode = document.getElementById("bank").value;
+      const accountNumber = document.getElementById("rekening").value;
+      const hasil = document.getElementById("hasil");
 
-    // Ambil daftar bank
-    async function getBankList() {
+      if (!accountNumber || !bankCode) {
+        hasil.textContent = "Mohon isi semua data.";
+        return;
+      }
+
+      hasil.textContent = "⏳ Sedang mengecek...";
+
+      const url = `https://cek-nomor-rekening-bank.p.rapidapi.com/check_bank_lq/${bankCode}/${accountNumber}`;
+
       try {
-        const res = await fetch("https://storepanda.web.id/api/banklist", {
+        const response = await fetch(url, {
+          method: "GET",
           headers: {
-            "Authorization": `Bearer ${API_KEY}`,
-            "Accept": "application/json"
+            "x-rapidapi-key": "fecb5eb343msh5c49bd1c108f9ccp1212b6jsnc8457e96ba7a",
+            "x-rapidapi-host": "cek-nomor-rekening-bank.p.rapidapi.com"
           }
         });
-        const data = await res.json();
-        const select = document.getElementById("bank");
 
-        data.data.forEach(bank => {
-          const opt = document.createElement("option");
-          opt.value = bank.code;
-          opt.textContent = `${bank.name} (${bank.code})`;
-          select.appendChild(opt);
-        });
-      } catch (err) {
-        document.getElementById("hasil").textContent = "Gagal ambil daftar bank.";
+        const json = await response.json();
+
+        if (json?.data?.nama) {
+          hasil.textContent =
+            `✅ Rekening ditemukan:\n\n` +
+            `🏦 Bank: ${bankCode.toUpperCase()}\n` +
+            `🔢 Rekening: ${accountNumber}\n` +
+            `👤 Nama: ${json.data.nama}`;
+        } else {
+          hasil.textContent = `❌ Tidak ditemukan atau tidak valid.`;
+        }
+      } catch (error) {
+        hasil.textContent = "❌ Gagal menghubungi API RapidAPI.";
       }
     }
-
-    // Cek rekening
-async function cekRekening() {
-  const bankCode = document.getElementById("bank").value; // contoh: "bank_mandiri"
-  const accountNumber = document.getElementById("rekening").value;
-  const hasil = document.getElementById("hasil");
-
-  if (!accountNumber || !bankCode) {
-    hasil.textContent = "Mohon isi semua data.";
-    return;
-  }
-
-  hasil.textContent = "⏳ Sedang mengecek...";
-
-  const url = `https://cek-nomor-rekening-bank.p.rapidapi.com/check_bank_lq/${bankCode}/${accountNumber}`;
-
-  try {
-    const response = await fetch(url, {
-      method: "GET",
-      headers: {
-        "x-rapidapi-key": "fecb5eb343msh5c49bd1c108f9ccp1212b6jsnc8457e96ba7a",
-        "x-rapidapi-host": "cek-nomor-rekening-bank.p.rapidapi.com"
-      }
-    });
-
-    const json = await response.json();
-
-    if (json?.data?.nama) {
-      hasil.textContent =
-        `✅ Rekening ditemukan:\n\n` +
-        `🏦 Bank: ${bankCode.toUpperCase()}\n` +
-        `🔢 Rekening: ${accountNumber}\n` +
-        `👤 Nama: ${json.data.nama}`;
-    } else {
-      hasil.textContent = `❌ Tidak ditemukan atau tidak valid.`;
-    }
-  } catch (error) {
-    hasil.textContent = "❌ Gagal menghubungi API RapidAPI.";
-  }
-}
-
-
-    // Load bank saat halaman dibuka
-    getBankList();
   </script>
 </body>
 </html>
