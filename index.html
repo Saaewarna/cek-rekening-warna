@@ -9,7 +9,7 @@
   <div class="bg-white p-8 rounded-xl shadow-xl w-full max-w-md">
     
     <!-- 💳 Form Cek E-Wallet -->
-    <h2 class="text-2xl font-bold mb-6 text-center text-green-600">🔍 Cek Info E-Wallet</h2>
+    <h2 class="text-2xl font-bold mb-6 text-center text-green-600">🔍 Cek Info E-Wallet Warna Group</h2>
 
     <form id="walletForm" class="space-y-4">
       <div>
@@ -65,11 +65,11 @@
           `🧑 Nama: ${data.data.name || 'Tidak tersedia'}\n` +
           `📱 Nomor: ${data.data.account_number}`;
       } else {
-        resultBox.textContent = "❌ Wallet tidak ditemukan atau nomor salah.";
+        resultBox.textContent = "❌ Nomor ga ada, coba cek tanyain lagi ke orang nya yang valid.";
       }
 
     } catch (err) {
-      resultBox.textContent = "❌ Terjadi error saat cek data.";
+      resultBox.textContent = "❌ Error nih ga ada nomornya ga valid.";
     }
   });
 </script>
