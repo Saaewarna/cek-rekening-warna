@@ -2,7 +2,7 @@
 <html lang="id">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>🔥 WarnaGroup Cekrek</title>
   <script src="https://cdn.tailwindcss.com"></script>
 </head>
@@ -26,7 +26,7 @@
           <option value="gopay">GoPay</option>
           <option value="ovo">OVO</option>
           <option value="dana">DANA</option>
-          <option value="linkaja">LinkAja</option>
+          <option value="linkaja">LINKAJA</option>
         </select>
       </div>
 
@@ -42,8 +42,8 @@
           <option value="bank_btn">BTN</option>
           <option value="bank_btpn">BTPN / Jenius</option>
           <option value="bank_bsi">BSI Indonesia</option>
+          <option value="bank_digibank">Digibank</option>
           <option value="bank_cimb_niaga">CIMB Niaga</option>
-          <option value="bank_dbs_indonesia">DBS Indonesia</option>
         </select>
       </div>
 
@@ -56,7 +56,8 @@
         Cek Sekarang
       </button>
     </form>
-      <div id="resultBox" class="mt-6 px-4 py-3 rounded bg-gray-100 text-sm text-gray-800 w-full flex flex-col justify-center items-start gap-1 min-h-[48px]">
+
+    <div id="resultBox" class="mt-6 px-4 py-3 rounded bg-gray-100 text-sm text-gray-800 w-full text-center whitespace-pre-line min-h-[48px]">
       🔍 Masukkin Datanya.
     </div>
   </div>
@@ -70,8 +71,8 @@
 
     modeSelect.addEventListener("change", () => {
       const isEwallet = modeSelect.value === "ewallet";
-      providerWrapper.style.display = isEwallet ? "block" : "none";
-      bankWrapper.style.display = isEwallet ? "none" : "block";
+      providerWrapper.classList.toggle("hidden", !isEwallet);
+      bankWrapper.classList.toggle("hidden", isEwallet);
       idLabel.textContent = isEwallet ? "Nomor HP / ID:" : "Nomor Rekening:";
     });
 
@@ -84,7 +85,7 @@
       const bank = document.getElementById("bank").value;
 
       if (!id) {
-        resultBox.textContent = "⚠️ Mohon masukkan ID atau nomor rekening.";
+        resultBox.innerHTML = `🔍 Masukkin Datanya.`;
         return;
       }
 
@@ -102,20 +103,29 @@
         const data = await res.json();
 
         if (!res.ok || !data.success) {
-          resultBox.textContent = `❌ Tidak ditemukan atau tidak valid.`;
+          resultBox.innerHTML = `❌ Tidak ditemukan atau tidak valid.`;
           return;
         }
 
-        if (mode === "ewallet" && data.data?.status === "SUCCESS") {
-          resultBox.textContent = `✅ Nama: ${data.data.name}\n🔢 ID: ${data.data.account_number}\n💼 Wallet: ${data.data.bank}`;
-        } else if (mode === "bank" && data.data?.nama && data.data?.no_rekening) {
-          resultBox.textContent = `✅ Nama: ${data.data.nama}\n🏦 Bank: ${data.data.nama_bank}\n🔢 Rekening: ${data.data.no_rekening}`;
+        if (mode === "ewallet" && data.data.status === "SUCCESS") {
+          resultBox.innerHTML = `
+            ✅ <strong>Nama:</strong> ${data.data.name}<br>
+            🔢 <strong>ID:</strong> ${data.data.account_number}<br>
+            💼 <strong>Wallet:</strong> ${data.data.bank.toLowerCase()}
+          `;
+        } else if (mode === "bank" && data.data.nama) {
+          resultBox.innerHTML = `
+            ✅ <strong>Nama:</strong> ${data.data.nama}<br>
+            🔢 <strong>Rekening:</strong> ${data.data.no_rekening}<br>
+            🏦 <strong>Bank:</strong> ${data.data.nama_bank}
+          `;
         } else {
-          resultBox.textContent = `❌ Tidak ditemukan atau tidak valid.`;
+          resultBox.innerHTML = `❌ Tidak ditemukan atau tidak valid.`;
         }
+
       } catch (err) {
         console.error(err);
-        resultBox.textContent = `❌ Gagal memproses data. Coba lagi nanti.`;
+        resultBox.innerHTML = `❌ Gagal memproses data. Coba lagi nanti.`;
       }
     });
   </script>
