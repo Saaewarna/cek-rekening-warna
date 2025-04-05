@@ -3,12 +3,12 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>🔥WarnaGroup Cekrek</title>
+  <title>🔥 WarnaGroup Cekrek</title>
   <script src="https://cdn.tailwindcss.com"></script>
 </head>
 <body class="bg-gray-100 min-h-screen flex items-center justify-center p-4">
   <div class="bg-white p-8 rounded-xl shadow-lg max-w-md w-full">
-    <h1 class="text-2xl font-bold text-blue-600 mb-6 text-center">🔥WarnaGroup Cekrek</h1>
+    <h1 class="text-2xl font-bold text-blue-600 mb-6 text-center">🔥 <span class="text-blue-700">WarnaGroup Cekrek</span></h1>
 
     <form id="paymentForm" class="space-y-4">
       <div>
@@ -42,6 +42,7 @@
           <option value="bank_btn">BTN</option>
           <option value="bank_btpn">BTPN / Jenius</option>
           <option value="bank_bsi">BSI Indonesia</option>
+          <option value="bank_digibank">Digibank</option>
           <option value="bank_cimb_niaga">CIMB Niaga</option>
           <option value="bank_dbs_indonesia">DBS Indonesia</option>
         </select>
@@ -57,7 +58,7 @@
       </button>
     </form>
 
-    <div id="resultBox" class="mt-6 p-4 rounded bg-gray-100 text-sm text-gray-800 whitespace-pre-line">
+    <div id="resultBox" class="mt-6 px-4 py-3 rounded bg-gray-100 text-sm text-gray-800 whitespace-pre-line inline-block max-w-full">
       🔍 Belum dicek.
     </div>
   </div>
@@ -80,7 +81,7 @@
       e.preventDefault();
 
       const mode = document.getElementById("mode").value;
-      const id = document.getElementById("id").value.trim();
+      const id = document.getElementById("id").value;
       const provider = document.getElementById("provider").value;
       const bank = document.getElementById("bank").value;
 
@@ -97,28 +98,17 @@
         const res = await fetch(`/api/inquiry${query}`);
         const data = await res.json();
 
-        if (!res.ok || data.error || data.message === "Endpoint not found") {
-          resultBox.innerHTML = `❌ Tidak ditemukan atau tidak valid.`;
+        if (!res.ok || !data.success || !data.data) {
+          resultBox.textContent = `❌ Tidak ditemukan atau tidak valid.`;
           return;
         }
 
-        // E-wallet result
-        if (mode === "ewallet" && data?.data?.status === "SUCCESS") {
-          resultBox.innerHTML = `
-            ✅ <strong>Nama:</strong> ${data.data.name}<br>
-            🆔 <strong>ID:</strong> ${data.data.account_number}<br>
-            💼 <strong>Wallet:</strong> ${data.data.bank}
-          `;
-        }
-        // Bank result
-        else if (mode === "bank" && data?.success && data?.data) {
-          resultBox.innerHTML = `
-            ✅ <strong>Nama:</strong> ${data.data.nama}<br>
-            🏦 <strong>Bank:</strong> ${data.data.nama_bank}<br>
-            🔢 <strong>Rekening:</strong> ${data.data.no_rekening}
-          `;
+        if (mode === "ewallet" && data.data.status === "SUCCESS") {
+          resultBox.textContent = `✅ Nama: ${data.data.name}\n🔢 ID: ${data.data.account_number}\n💼 Wallet: ${data.data.bank}`;
+        } else if (mode === "bank") {
+          resultBox.textContent = `✅ Nama: ${data.data.nama}\n🏦 Bank: ${data.data.nama_bank}\n🔢 Rekening: ${data.data.no_rekening}`;
         } else {
-          resultBox.innerHTML = `❌ Tidak ditemukan atau tidak valid.`;
+          resultBox.textContent = `❌ Tidak ditemukan atau tidak valid.`;
         }
       } catch (err) {
         console.error(err);
