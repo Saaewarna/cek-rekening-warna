@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="id">
 <head>
-  <meta charset="UTF-8" />
+  <meta charset="UTF-8">
   <title>Cek Info Pembayaran</title>
   <script src="https://cdn.tailwindcss.com"></script>
 </head>
@@ -55,29 +55,34 @@
     </form>
 
     <h3 class="mt-6 font-semibold text-gray-700">Hasil:</h3>
-    <pre id="result" class="bg-gray-200 p-3 rounded text-sm text-gray-800 whitespace-pre-wrap">Belum dicek.</pre>
+    <pre id="result" class="bg-gray-200 p-3 rounded text-sm text-gray-800">Belum dicek.</pre>
   </div>
 
   <script>
     const modeSelect = document.getElementById("mode");
     const idLabel = document.getElementById("idLabel");
-    const idInput = document.getElementById("id");
     const providerWrapper = document.getElementById("providerWrapper");
     const bankWrapper = document.getElementById("bankWrapper");
     const resultBox = document.getElementById("result");
+    const form = document.getElementById("paymentForm");
 
     modeSelect.addEventListener("change", () => {
-      const isEwallet = modeSelect.value === "ewallet";
-      providerWrapper.style.display = isEwallet ? "block" : "none";
-      bankWrapper.style.display = isEwallet ? "none" : "block";
-      idLabel.textContent = isEwallet ? "Nomor HP / ID:" : "Nomor Rekening:";
+      if (modeSelect.value === "ewallet") {
+        providerWrapper.style.display = "block";
+        bankWrapper.style.display = "none";
+        idLabel.textContent = "Nomor HP / ID:";
+      } else {
+        providerWrapper.style.display = "none";
+        bankWrapper.style.display = "block";
+        idLabel.textContent = "Nomor Rekening:";
+      }
     });
 
-    document.getElementById("paymentForm").addEventListener("submit", async (e) => {
+    form.addEventListener("submit", async (e) => {
       e.preventDefault();
       const mode = modeSelect.value;
-      const id = document.getElementById("id").value.trim();
-      const provider = document.getElementById("provider").value;
+      const id = document.getElementById("id").value;
+      const provider = document.getElementById("provider").value.toLowerCase();
       const bank = document.getElementById("bank").value;
 
       resultBox.textContent = "⏳ Sedang mengecek...";
@@ -93,20 +98,21 @@
         const res = await fetch(`/api/inquiry${query}`);
         const data = await res.json();
 
-        if (data.success && data.data) {
-          if (mode === "ewallet" && data.data.status === "SUCCESS") {
-            resultBox.textContent = `✅ Nama: ${data.data.name}\n🔢 ID: ${data.data.account_number}\n💼 Provider: ${data.data.bank}`;
-          } else if (mode === "bank" && (data.data.status === "VALID" || data.data.nama)) {
-            resultBox.textContent = `✅ Nama: ${data.data.nama}\n🏦 Bank: ${data.data.nama_bank || data.data.bank_code}\n🔢 Rekening: ${data.data.no_rekening || data.data.account_number}`;
+        if (mode === "ewallet") {
+          if (data.success && data.data && data.data.status === "SUCCESS") {
+            resultBox.textContent = `✅ Nama: ${data.data.name}\n🔢 ID: ${data.data.account_number}\n💼 Wallet: ${data.data.bank}`;
           } else {
-            resultBox.textContent = `❌ Data tidak ditemukan atau status tidak valid.`;
+            resultBox.textContent = `❌ Data tidak ditemukan. Coba periksa kembali.`;
           }
         } else {
-          resultBox.textContent = `❌ Gagal memproses data. Cek input dan coba lagi.`;
+          if (data.success && data.data && data.data.nama) {
+            resultBox.textContent = `✅ Nama: ${data.data.nama}\n🏦 Bank: ${data.data.nama_bank}\n🔢 Rekening: ${data.data.no_rekening}`;
+          } else {
+            resultBox.textContent = `❌ Nomor rekening tidak valid atau tidak ditemukan.`;
+          }
         }
       } catch (err) {
-        console.error(err);
-        resultBox.textContent = "❌ Terjadi error saat cek data.";
+        resultBox.textContent = "❌ Gagal memproses data. Cek input dan coba lagi.";
       }
     });
   </script>
