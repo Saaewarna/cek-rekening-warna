@@ -1,39 +1,30 @@
 export default async function handler(req, res) {
-  if (req.method !== "POST") {
-    return res.status(405).json({ error: "Method not allowed" });
+  if (req.method !== 'GET') {
+    return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  const { bankCode, accountNumber, demoMode } = req.body;
+  const { id, provider } = req.query;
 
-  if (demoMode) {
-    return res.status(200).json({
-      status: 200,
-      message: "Rekening ditemukan. (DEMO)",
-      data: {
-        bank: bankCode || "Bank Demo",
-        rekening: accountNumber || "0000000000",
-        name: "ERZA DEMO",
-        saldo: "999999"
-      }
-    });
+  if (!id || !provider) {
+    return res.status(400).json({ error: 'Missing id or provider' });
   }
 
-  const token = "59|duOPH8HB155IQ7xmfzhVXhngOvniL08APtCqswX8bae08bd5";
+  const url = `https://check-id-ovo-gopay-shopee-linkaja-dana.p.rapidapi.com/cek_ewallet/${id}/${provider}`;
+
+  const options = {
+    method: 'GET',
+    headers: {
+      'x-rapidapi-host': process.env.RAPIDAPI_HOST,
+      'x-rapidapi-key': process.env.RAPIDAPI_KEY,
+    },
+  };
 
   try {
-    const storepandaRes = await fetch("https://storepanda.web.id/api/inquiry", {
-      method: "POST",
-      headers: {
-        "Authorization": `Bearer ${token}`,
-        "Content-Type": "application/json",
-        "Accept": "application/json"
-      },
-      body: JSON.stringify({ bankCode, accountNumber })
-    });
-
-    const data = await storepandaRes.json();
-    res.status(storepandaRes.status).json(data);
-  } catch (err) {
-    res.status(500).json({ error: "Proxy error", details: err.message });
+    const response = await fetch(url, options);
+    const data = await response.json();
+    res.status(200).json(data);
+  } catch (error) {
+    console.error('Error:', error);
+    res.status(500).json({ error: 'Internal server error' });
   }
 }
