@@ -15,7 +15,13 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: 'Parameter id dan provider wajib diisi untuk e-wallet.' });
     }
 
-    url = `https://${process.env.RAPIDAPI_HOST}/cekwallet/${provider}/${id}`;
+    // 🔥 Fix khusus LinkAja
+    if (provider === 'linkaja') {
+      url = `https://${process.env.RAPIDAPI_HOST}/cekwallet/${id}`; // tanpa /provider
+    } else {
+      url = `https://${process.env.RAPIDAPI_HOST}/cek_ewallet/${id}/${provider}`;
+    }
+
     headers['x-rapidapi-host'] = process.env.RAPIDAPI_HOST;
 
   } else if (mode === 'bank') {
@@ -34,7 +40,6 @@ export default async function handler(req, res) {
     console.log('[DEBUG] Final URL:', url);
     const response = await fetch(url, { method: 'GET', headers });
     const data = await response.json();
-
     res.status(200).json(data);
   } catch (error) {
     console.error('API error:', error);
