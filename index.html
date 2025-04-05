@@ -2,13 +2,13 @@
 <html lang="id">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>🔥 WarnaGroup Cekrek</title>
   <script src="https://cdn.tailwindcss.com"></script>
 </head>
 <body class="bg-gray-100 min-h-screen flex items-center justify-center p-4">
   <div class="bg-white p-8 rounded-xl shadow-lg max-w-md w-full">
-    <h1 class="text-2xl font-bold text-blue-600 mb-6 text-center">🔥 <span class="text-blue-700">WarnaGroup Cekrek</span></h1>
+    <h1 class="text-2xl font-bold text-blue-600 mb-6 text-center">🔥 WarnaGroup Cekrek</h1>
 
     <form id="paymentForm" class="space-y-4">
       <div>
@@ -42,7 +42,6 @@
           <option value="bank_btn">BTN</option>
           <option value="bank_btpn">BTPN / Jenius</option>
           <option value="bank_bsi">BSI Indonesia</option>
-          <option value="bank_digibank">Digibank</option>
           <option value="bank_cimb_niaga">CIMB Niaga</option>
           <option value="bank_dbs_indonesia">DBS Indonesia</option>
         </select>
@@ -58,8 +57,8 @@
       </button>
     </form>
 
-    <div id="resultBox" class="mt-6 px-4 py-3 rounded bg-gray-100 text-sm text-gray-800 whitespace-pre-line inline-block max-w-full">
-      🔍 Belum dicek.
+    <div id="resultBox" class="mt-6 p-4 rounded bg-gray-100 text-sm text-gray-800 whitespace-pre-line w-full">
+      🔍 Masukkin Datanya.
     </div>
   </div>
 
@@ -81,9 +80,14 @@
       e.preventDefault();
 
       const mode = document.getElementById("mode").value;
-      const id = document.getElementById("id").value;
+      const id = document.getElementById("id").value.trim();
       const provider = document.getElementById("provider").value;
       const bank = document.getElementById("bank").value;
+
+      if (!id) {
+        resultBox.textContent = "⚠️ Mohon masukkan ID atau nomor rekening.";
+        return;
+      }
 
       resultBox.textContent = "⏳ Sedang memproses...";
 
@@ -98,14 +102,14 @@
         const res = await fetch(`/api/inquiry${query}`);
         const data = await res.json();
 
-        if (!res.ok || !data.success || !data.data) {
+        if (!res.ok || !data.success) {
           resultBox.textContent = `❌ Tidak ditemukan atau tidak valid.`;
           return;
         }
 
-        if (mode === "ewallet" && data.data.status === "SUCCESS") {
+        if (mode === "ewallet" && data.data?.status === "SUCCESS") {
           resultBox.textContent = `✅ Nama: ${data.data.name}\n🔢 ID: ${data.data.account_number}\n💼 Wallet: ${data.data.bank}`;
-        } else if (mode === "bank") {
+        } else if (mode === "bank" && data.data?.nama && data.data?.no_rekening) {
           resultBox.textContent = `✅ Nama: ${data.data.nama}\n🏦 Bank: ${data.data.nama_bank}\n🔢 Rekening: ${data.data.no_rekening}`;
         } else {
           resultBox.textContent = `❌ Tidak ditemukan atau tidak valid.`;
