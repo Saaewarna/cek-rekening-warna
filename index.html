@@ -102,19 +102,23 @@
 
         if (mode === "ewallet") {
           if (data.success && data.data && data.data.status === "SUCCESS") {
-            resultBox.textContent = `✅ Nama: ${data.data.name}\n🔢 ID: ${data.data.account_number}\n💼 Wallet: ${data.data.bank}`;
+            resultBox.textContent = `✅ Nama: ${data.data.name || data.data.account_holder}
+🔢 ID: ${data.data.account_number}
+💼 Wallet: ${data.data.bank}`;
           } else {
-            resultBox.textContent = `❌ Gagal memproses data. Cek input dan coba lagi.`;
+            resultBox.textContent = `❌ Tidak ditemukan atau tidak valid.`;
           }
         } else {
-          if (data.success && data.data && data.data.nama && data.data.nama_bank) {
-            resultBox.textContent = `✅ Nama: ${data.data.nama}\n🏦 Bank: ${data.data.nama_bank}\n🔢 Rekening: ${data.data.no_rekening}`;
+          if (data.success && data.data && (data.data.status === "VALID" || data.data.name)) {
+            resultBox.textContent = `✅ Nama: ${data.data.name}
+🏦 Bank: ${data.data.bank_code}
+🔢 Rekening: ${data.data.account_number}`;
           } else {
             resultBox.textContent = `❌ Nomor rekening tidak valid atau tidak ditemukan.`;
           }
         }
       } catch (err) {
-        resultBox.textContent = "❌ Terjadi error saat cek data.";
+        resultBox.textContent = "❌ Gagal memproses data. Cek input dan coba lagi.";
       }
     });
   </script>
