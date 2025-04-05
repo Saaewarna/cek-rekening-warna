@@ -49,7 +49,7 @@
 
       <div>
         <label for="id" id="idLabel" class="block font-medium">Nomor HP / ID:</label>
-        <input id="id" type="text" class="w-full p-2 border rounded" placeholder="Masukkan nomor">
+        <input id="id" type="text" class="w-full p-2 border rounded" placeholder="Masukkan nomor" required>
       </div>
 
       <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white w-full py-2 rounded">
@@ -71,8 +71,8 @@
 
     modeSelect.addEventListener("change", () => {
       const isEwallet = modeSelect.value === "ewallet";
-      providerWrapper.style.display = isEwallet ? "block" : "none";
-      bankWrapper.style.display = isEwallet ? "none" : "block";
+      providerWrapper.classList.toggle("hidden", !isEwallet);
+      bankWrapper.classList.toggle("hidden", isEwallet);
       idLabel.textContent = isEwallet ? "Nomor HP / ID:" : "Nomor Rekening:";
     });
 
@@ -80,7 +80,7 @@
       e.preventDefault();
 
       const mode = document.getElementById("mode").value;
-      const id = document.getElementById("id").value;
+      const id = document.getElementById("id").value.trim();
       const provider = document.getElementById("provider").value;
       const bank = document.getElementById("bank").value;
 
@@ -97,7 +97,7 @@
         const res = await fetch(`/api/inquiry${query}`);
         const data = await res.json();
 
-        if (!res.ok || !data.success) {
+        if (!res.ok || data.success === false || !data.data) {
           resultBox.textContent = `❌ Tidak ditemukan atau tidak valid.`;
           return;
         }
@@ -110,7 +110,7 @@
           resultBox.textContent = `❌ Tidak ditemukan atau tidak valid.`;
         }
       } catch (err) {
-        console.error(err);
+        console.error("[FE ERROR]", err);
         resultBox.textContent = `❌ Gagal memproses data. Coba lagi nanti.`;
       }
     });
