@@ -10,25 +10,19 @@ export default async function handler(req, res) {
     'x-rapidapi-key': process.env.RAPIDAPI_KEY,
   };
 
-  // ✅ E-Wallet Section
   if (mode === 'ewallet') {
     if (!id || !provider) {
       return res.status(400).json({ error: 'Parameter id dan provider wajib diisi untuk e-wallet.' });
     }
 
-    let endpointPath, providerName;
+    // LINKAJA pakai uppercase dan endpoint berbeda
     if (provider.toLowerCase() === 'linkaja') {
-      endpointPath = 'cekewallet';
-      providerName = 'LINKAJA'; // HARUS kapital
+      url = `https://${process.env.RAPIDAPI_HOST}/cekewallet/${id}/LINKAJA`;
     } else {
-      endpointPath = 'cek_ewallet';
-      providerName = provider.toLowerCase(); // lowercase
+      url = `https://${process.env.RAPIDAPI_HOST}/cek_ewallet/${id}/${provider.toLowerCase()}`;
     }
 
-    url = `https://${process.env.RAPIDAPI_HOST}/${endpointPath}/${id}/${providerName}`;
     headers['x-rapidapi-host'] = process.env.RAPIDAPI_HOST;
-
-  // ✅ BANK Section
   } else if (mode === 'bank') {
     if (!bank || !rekening) {
       return res.status(400).json({ error: 'Parameter bank dan rekening wajib diisi untuk cek rekening.' });
@@ -36,7 +30,6 @@ export default async function handler(req, res) {
 
     url = `https://${process.env.RAPIDAPI_HOST_BANK}/check_bank_lq/${bank}/${rekening}`;
     headers['x-rapidapi-host'] = process.env.RAPIDAPI_HOST_BANK;
-
   } else {
     return res.status(400).json({ error: 'Mode tidak valid. Gunakan "ewallet" atau "bank".' });
   }
