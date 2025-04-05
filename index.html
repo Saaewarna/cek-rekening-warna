@@ -26,7 +26,7 @@
           <option value="gopay">GoPay</option>
           <option value="ovo">OVO</option>
           <option value="dana">DANA</option>
-          <option value="linkaja">LINKAJA</option>
+          <option value="linkaja">LinkAja</option>
         </select>
       </div>
 
@@ -44,12 +44,13 @@
           <option value="bank_bsi">BSI Indonesia</option>
           <option value="bank_digibank">Digibank</option>
           <option value="bank_cimb_niaga">CIMB Niaga</option>
+          <option value="bank_dbs_indonesia">DBS Indonesia</option>
         </select>
       </div>
 
       <div>
         <label for="id" id="idLabel" class="block font-medium">Nomor HP / ID:</label>
-        <input id="id" type="text" class="w-full p-2 border rounded" placeholder="Masukkan nomor">
+        <input id="id" type="text" class="w-full p-2 border rounded" placeholder="Masukkan nomor" />
       </div>
 
       <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white w-full py-2 rounded">
@@ -57,8 +58,8 @@
       </button>
     </form>
 
-    <div id="resultBox" class="mt-6 px-4 py-3 rounded bg-gray-100 text-sm text-gray-800 w-full text-center whitespace-pre-line min-h-[48px]">
-      🔍 Masukkin Datanya.
+    <div id="resultBox" class="mt-6 p-4 rounded bg-gray-100 text-sm text-gray-800 text-center">
+      <span>🔍 Masukkin Datanya.</span>
     </div>
   </div>
 
@@ -71,8 +72,8 @@
 
     modeSelect.addEventListener("change", () => {
       const isEwallet = modeSelect.value === "ewallet";
-      providerWrapper.classList.toggle("hidden", !isEwallet);
-      bankWrapper.classList.toggle("hidden", isEwallet);
+      providerWrapper.style.display = isEwallet ? "block" : "none";
+      bankWrapper.style.display = isEwallet ? "none" : "block";
       idLabel.textContent = isEwallet ? "Nomor HP / ID:" : "Nomor Rekening:";
     });
 
@@ -85,11 +86,11 @@
       const bank = document.getElementById("bank").value;
 
       if (!id) {
-        resultBox.innerHTML = `🔍 Masukkin Datanya.`;
+        resultBox.innerHTML = `<div class="text-center">🔍 Masukkin Datanya.</div>`;
         return;
       }
 
-      resultBox.textContent = "⏳ Sedang memproses...";
+      resultBox.innerHTML = `<div class="text-center">⏳ Sedang memproses...</div>`;
 
       let query = `?mode=${mode}`;
       if (mode === "ewallet") {
@@ -103,29 +104,32 @@
         const data = await res.json();
 
         if (!res.ok || !data.success) {
-          resultBox.innerHTML = `❌ Tidak ditemukan atau tidak valid.`;
+          resultBox.innerHTML = `<div class="text-center text-red-600">❌ Tidak ditemukan atau tidak valid.</div>`;
           return;
         }
 
         if (mode === "ewallet" && data.data.status === "SUCCESS") {
           resultBox.innerHTML = `
-            ✅ <strong>Nama:</strong> ${data.data.name}<br>
-            🔢 <strong>ID:</strong> ${data.data.account_number}<br>
-            💼 <strong>Wallet:</strong> ${data.data.bank.toLowerCase()}
+            <div class="text-left text-sm">
+              ✅ <strong>Nama:</strong> ${data.data.name}<br>
+              🔢 <strong>ID:</strong> ${data.data.account_number}<br>
+              💼 <strong>Wallet:</strong> ${data.data.bank.toLowerCase()}
+            </div>
           `;
-        } else if (mode === "bank" && data.data.nama) {
+        } else if (mode === "bank") {
           resultBox.innerHTML = `
-            ✅ <strong>Nama:</strong> ${data.data.nama}<br>
-            🔢 <strong>Rekening:</strong> ${data.data.no_rekening}<br>
-            🏦 <strong>Bank:</strong> ${data.data.nama_bank}
+            <div class="text-left text-sm">
+              ✅ <strong>Nama:</strong> ${data.data.nama}<br>
+              🔢 <strong>Rekening:</strong> ${data.data.no_rekening}<br>
+              🏦 <strong>Bank:</strong> ${data.data.nama_bank}
+            </div>
           `;
         } else {
-          resultBox.innerHTML = `❌ Tidak ditemukan atau tidak valid.`;
+          resultBox.innerHTML = `<div class="text-center text-red-600">❌ Tidak ditemukan atau tidak valid.</div>`;
         }
-
       } catch (err) {
         console.error(err);
-        resultBox.innerHTML = `❌ Gagal memproses data. Coba lagi nanti.`;
+        resultBox.innerHTML = `<div class="text-center text-red-600">❌ Gagal memproses data. Coba lagi nanti.</div>`;
       }
     });
   </script>
