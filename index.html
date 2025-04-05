@@ -43,25 +43,35 @@
 
   <!-- 📜 Script E-Wallet -->
   <script>
-    const form = document.getElementById("walletForm");
-    const resultBox = document.getElementById("result");
+  const form = document.getElementById("walletForm");
+  const resultBox = document.getElementById("result");
 
-    form.addEventListener("submit", async (e) => {
-      e.preventDefault();
+  form.addEventListener("submit", async (e) => {
+    e.preventDefault();
 
-      const id = document.getElementById("id").value;
-      const provider = document.getElementById("provider").value;
+    const id = document.getElementById("id").value;
+    const provider = document.getElementById("provider").value;
 
-      resultBox.textContent = "⏳ Sedang mengecek...";
+    resultBox.textContent = "⏳ Sedang mengecek...";
 
-      try {
-        const res = await fetch(`/api/inquiry?id=${id}&provider=${provider}`);
-        const data = await res.json();
-        resultBox.textContent = JSON.stringify(data, null, 2);
-      } catch (err) {
-        resultBox.textContent = "❌ Terjadi error saat cek data.";
+    try {
+      const res = await fetch(`/api/inquiry?id=${id}&provider=${provider}`);
+      const data = await res.json();
+
+      if (data.success && data.data.status !== "INVALID_ACCOUNT_NUMBER") {
+        resultBox.textContent =
+          `✅ Wallet ditemukan:\n\n` +
+          `💳 Bank: ${data.data.bank}\n` +
+          `🧑 Nama: ${data.data.name || 'Tidak tersedia'}\n` +
+          `📱 Nomor: ${data.data.account_number}`;
+      } else {
+        resultBox.textContent = "❌ Wallet tidak ditemukan atau nomor salah.";
       }
-    });
-  </script>
+
+    } catch (err) {
+      resultBox.textContent = "❌ Terjadi error saat cek data.";
+    }
+  });
+</script>
 </body>
 </html>
