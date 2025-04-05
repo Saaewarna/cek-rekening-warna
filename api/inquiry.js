@@ -16,11 +16,12 @@ export default async function handler(req, res) {
     }
 
     // ✅ Khusus linkaja tanpa /provider di path
-    if (provider === 'linkaja') {
-      url = `https://${process.env.RAPIDAPI_HOST}/cekewallet/${id}`;
-    } else {
-      url = `https://${process.env.RAPIDAPI_HOST}/cek_ewallet/${id}/${provider}`;
-    }
+if (provider === 'linkaja') {
+  url = `https://${process.env.RAPIDAPI_HOST}/cekewallet/${id}/${provider}`;
+} else {
+  url = `https://${process.env.RAPIDAPI_HOST}/cek_ewallet/${id}/${provider}`;
+}
+
 
     headers['x-rapidapi-host'] = process.env.RAPIDAPI_HOST;
   } else if (mode === 'bank') {
