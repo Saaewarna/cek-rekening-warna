@@ -6,7 +6,7 @@ export default async function handler(req, res) {
   }
 
   let url = '';
-  const headers = {
+  let headers = {
     'x-rapidapi-key': process.env.RAPIDAPI_KEY
   };
 
@@ -15,12 +15,8 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: 'Parameter id dan provider wajib diisi untuk e-wallet.' });
     }
 
-    // 🔧 Khusus LinkAja, endpoint-nya beda
-    const path = provider === 'linkaja'
-      ? `cekewallet/${id}/linkaja`
-      : `cek_ewallet/${id}/${provider}`;
-
-    url = `https://${process.env.RAPIDAPI_HOST}/${path}`;
+    // Fix: make sure path pakai underscore (_)
+    url = `https://${process.env.RAPIDAPI_HOST}/cek_ewallet/${id}/${provider}`;
     headers['x-rapidapi-host'] = process.env.RAPIDAPI_HOST;
 
   } else if (mode === 'bank') {
@@ -28,6 +24,7 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: 'Parameter bank dan rekening wajib diisi untuk cek rekening.' });
     }
 
+    // Pakai path check_bank_lq universal endpoint
     url = `https://${process.env.RAPIDAPI_HOST_BANK}/check_bank_lq/${bank}/${rekening}`;
     headers['x-rapidapi-host'] = process.env.RAPIDAPI_HOST_BANK;
 
@@ -38,7 +35,12 @@ export default async function handler(req, res) {
   try {
     const response = await fetch(url, { method: 'GET', headers });
     const data = await response.json();
-    res.status(200).json(data);
+
+    if (!response.ok || data.message?.toLowerCase().includes("does not exist")) {
+      return res.status(404).json({ error: 'API endpoint tidak ditemukan atau provider tidak tersedia.' });
+    }
+
+    return res.status(200).json(data);
   } catch (error) {
     console.error('API error:', error);
     res.status(500).json({ error: 'Internal Server Error' });
