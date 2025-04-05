@@ -15,8 +15,10 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: 'Parameter id dan provider wajib diisi untuk e-wallet.' });
     }
 
-    // ✅ FIXED: semua ewallet pakai pattern ini
-    url = `https://${process.env.RAPIDAPI_HOST}/cekwallet/${provider}/${id}`;
+    // ✅ Benerin LINKAJA pakai huruf besar sesuai yang diminta API
+    const providerPath = provider.toLowerCase() === 'linkaja' ? 'LINKAJA' : provider;
+
+    url = `https://${process.env.RAPIDAPI_HOST}/cekewallet/${id}/${providerPath}`;
     headers['x-rapidapi-host'] = process.env.RAPIDAPI_HOST;
 
   } else if (mode === 'bank') {
