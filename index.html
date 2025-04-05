@@ -2,12 +2,12 @@
 <html lang="id">
 <head>
   <meta charset="UTF-8" />
-  <title>Warna Group - Cek Rekening 🔥</title>
+  <title>Cek Info Pembayaran</title>
   <script src="https://cdn.tailwindcss.com"></script>
 </head>
 <body class="min-h-screen bg-gray-100 flex items-center justify-center p-6">
   <div class="bg-white p-8 rounded-xl shadow-xl w-full max-w-md">
-    <h2 class="text-2xl font-bold mb-6 text-center text-blue-600">🔥 Warna Group - Cek Rekening</h2>
+    <h2 class="text-2xl font-bold mb-6 text-center text-blue-600">🔎 Cek Info Pembayaran</h2>
 
     <form id="checkForm" class="space-y-4">
       <div>
@@ -115,11 +115,13 @@
           res = await fetch(`/api/inquiry?mode=bank&bank=${bank}&rekening=${encodeURIComponent(rekening)}`);
           data = await res.json();
 
-          if (data.status === true || data.success === true) {
+          const nama = data.data?.nama || data.data?.name || data.data?.account_holder || "";
+
+          if ((data.status === true || data.success === true) && nama) {
             resultBox.textContent =
               `✅ Rekening ditemukan:\n\n` +
               `🏦 Bank: ${bank}\n` +
-              `👤 Nama: ${data.data?.nama || "Tidak tersedia"}\n` +
+              `👤 Nama: ${nama}\n` +
               `🔢 Rekening: ${rekening}`;
           } else {
             resultBox.textContent = "❌ Nomor rekening tidak valid atau tidak ditemukan.";
