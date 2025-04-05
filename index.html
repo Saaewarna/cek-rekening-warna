@@ -85,7 +85,7 @@
           const id = document.getElementById("id").value;
           const provider = document.getElementById("provider").value;
 
-          res = await fetch(`/api/inquiry?id=${id}&provider=${provider}`);
+          res = await fetch(`/api/inquiry?mode=ewallet&id=${id}&provider=${provider}`);
           data = await res.json();
 
           if (data.success && data.data.status !== "INVALID_ACCOUNT_NUMBER") {
@@ -95,21 +95,14 @@
               `👤 Nama: ${data.data.name || "Tidak tersedia"}\n` +
               `🔢 Nomor: ${data.data.account_number}`;
           } else {
-            resultBox.textContent = "❌ Wallet tidak ditemukan atau salah.";
+            resultBox.textContent = "❌ Wallet tidak ditemukan atau nomor salah.";
           }
 
         } else if (mode.value === "bank") {
           const bank = document.getElementById("bank").value;
           const rekening = document.getElementById("rekening").value;
 
-          res = await fetch(`https://cek-nomor-rekening-bank.p.rapidapi.com/check_bank_lq/${bank}/${rekening}`, {
-            method: 'GET',
-            headers: {
-              'x-rapidapi-host': 'cek-nomor-rekening-bank.p.rapidapi.com',
-              'x-rapidapi-key': 'f25158c23dmshfe6d6692cc150e5p158bd1jsndeeb3f95e537'
-            }
-          });
-
+          res = await fetch(`/api/inquiry?mode=bank&bank=${bank}&rekening=${rekening}`);
           data = await res.json();
 
           if (data.status === true || data.success === true) {
