@@ -42,14 +42,14 @@
           <option value="bank_btn">BTN</option>
           <option value="bank_btpn">BTPN / Jenius</option>
           <option value="bank_bsi">BSI Indonesia</option>
-          <option value="bank_digibank">Digibank</option>
           <option value="bank_cimb_niaga">CIMB Niaga</option>
+          <option value="bank_dbs_indonesia">DBS Indonesia</option>
         </select>
       </div>
 
       <div>
         <label for="id" id="idLabel" class="block font-medium">Nomor HP / ID:</label>
-        <input id="id" type="text" class="w-full p-2 border rounded" placeholder="Masukkan nomor" required>
+        <input id="id" type="text" class="w-full p-2 border rounded" placeholder="Masukkan nomor">
       </div>
 
       <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white w-full py-2 rounded">
@@ -71,8 +71,8 @@
 
     modeSelect.addEventListener("change", () => {
       const isEwallet = modeSelect.value === "ewallet";
-      providerWrapper.classList.toggle("hidden", !isEwallet);
-      bankWrapper.classList.toggle("hidden", isEwallet);
+      providerWrapper.style.display = isEwallet ? "block" : "none";
+      bankWrapper.style.display = isEwallet ? "none" : "block";
       idLabel.textContent = isEwallet ? "Nomor HP / ID:" : "Nomor Rekening:";
     });
 
@@ -97,20 +97,31 @@
         const res = await fetch(`/api/inquiry${query}`);
         const data = await res.json();
 
-        if (!res.ok || data.success === false || !data.data) {
-          resultBox.textContent = `❌ Tidak ditemukan atau tidak valid.`;
+        if (!res.ok || data.error || data.message === "Endpoint not found") {
+          resultBox.innerHTML = `❌ Tidak ditemukan atau tidak valid.`;
           return;
         }
 
-        if (mode === "ewallet" && data.data.status === "SUCCESS") {
-          resultBox.textContent = `✅ Nama: ${data.data.name}\n🔢 ID: ${data.data.account_number}\n💼 Wallet: ${data.data.bank}`;
-        } else if (mode === "bank" && data.data.status === "VALID") {
-          resultBox.textContent = `✅ Nama: ${data.data.name}\n🏦 Bank: ${data.data.bank_code}\n🔢 Rekening: ${data.data.account_number}`;
+        // E-wallet result
+        if (mode === "ewallet" && data?.data?.status === "SUCCESS") {
+          resultBox.innerHTML = `
+            ✅ <strong>Nama:</strong> ${data.data.name}<br>
+            🆔 <strong>ID:</strong> ${data.data.account_number}<br>
+            💼 <strong>Wallet:</strong> ${data.data.bank}
+          `;
+        }
+        // Bank result
+        else if (mode === "bank" && data?.success && data?.data) {
+          resultBox.innerHTML = `
+            ✅ <strong>Nama:</strong> ${data.data.nama}<br>
+            🏦 <strong>Bank:</strong> ${data.data.nama_bank}<br>
+            🔢 <strong>Rekening:</strong> ${data.data.no_rekening}
+          `;
         } else {
-          resultBox.textContent = `❌ Tidak ditemukan atau tidak valid.`;
+          resultBox.innerHTML = `❌ Tidak ditemukan atau tidak valid.`;
         }
       } catch (err) {
-        console.error("[FE ERROR]", err);
+        console.error(err);
         resultBox.textContent = `❌ Gagal memproses data. Coba lagi nanti.`;
       }
     });
