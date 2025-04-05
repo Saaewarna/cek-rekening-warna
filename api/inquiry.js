@@ -15,13 +15,7 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: 'Parameter id dan provider wajib diisi untuk e-wallet.' });
     }
 
-    // ✅ FIXED: LinkAja pakai /cekwallet/{id}, tanpa nama provider di path
-    if (provider === 'linkaja') {
-      url = `https://${process.env.RAPIDAPI_HOST}/cekwallet/${id}`;
-    } else {
-      url = `https://${process.env.RAPIDAPI_HOST}/cek_ewallet/${id}/${provider}`;
-    }
-
+    url = `https://${process.env.RAPIDAPI_HOST}/cekewallet/${id}/${provider}`;
     headers['x-rapidapi-host'] = process.env.RAPIDAPI_HOST;
 
   } else if (mode === 'bank') {
@@ -31,12 +25,13 @@ export default async function handler(req, res) {
 
     url = `https://${process.env.RAPIDAPI_HOST_BANK}/check_bank_lq/${bank}/${rekening}`;
     headers['x-rapidapi-host'] = process.env.RAPIDAPI_HOST_BANK;
+
   } else {
     return res.status(400).json({ error: 'Mode tidak valid. Gunakan "ewallet" atau "bank".' });
   }
 
   try {
-    console.log('🔍 Fetching from:', url); // bisa dilihat di logs Vercel
+    console.log('Fetching from:', url);
     const response = await fetch(url, { method: 'GET', headers });
     const data = await response.json();
     res.status(200).json(data);
