@@ -1,4 +1,4 @@
-// ✅ FINAL: /api/inquiry.js (support ewallet & bank multiple endpoint)
+// ✅ FINAL /api/inquiry.js dengan path endpoint per bank
 
 export default async function handler(req, res) {
   const { mode, id, provider, bank, rekening } = req.query;
@@ -17,7 +17,6 @@ export default async function handler(req, res) {
   } else if (mode === 'bank') {
     if (!bank || !rekening) return res.status(400).json({ error: 'bank & rekening wajib untuk cek rekening.' });
 
-    // map bank to correct host
     const bankHostMap = {
       bank_bca: 'cek-nomor-rekening-bca.p.rapidapi.com',
       bank_bni: 'cek-nomor-rekening-bni.p.rapidapi.com',
@@ -35,8 +34,26 @@ export default async function handler(req, res) {
     const selectedHost = bankHostMap[bank];
     if (!selectedHost) return res.status(400).json({ error: 'Bank tidak dikenali atau belum didukung.' });
 
-    url = `https://${selectedHost}/${bank}/${rekening}`;
     headers['x-rapidapi-host'] = selectedHost;
+
+    let path = '';
+    switch (bank) {
+      case 'bank_bca': path = `check_bca/${rekening}`; break;
+      case 'bank_bni': path = `check_bni/${rekening}`; break;
+      case 'bank_bri': path = `check_bri/${rekening}`; break;
+      case 'bank_mandiri': path = `check_bank_lq/bank_mandiri/${rekening}`; break;
+      case 'bank_cimb': path = `check_cimb/${rekening}`; break;
+      case 'bank_digibank': path = `check_digibank/${rekening}`; break;
+      case 'bank_bsi': path = `check_bsi/${rekening}`; break;
+      case 'bank_btn': path = `check_btn/${rekening}`; break;
+      case 'bank_btpn': path = `check_btpn/${rekening}`; break;
+      case 'bank_danamon': path = `check_danamon/${rekening}`; break;
+      case 'bank_permata': path = `check_permata/${rekening}`; break;
+      default:
+        return res.status(400).json({ error: 'Endpoint untuk bank belum ditentukan.' });
+    }
+
+    url = `https://${selectedHost}/${path}`;
 
   } else {
     return res.status(400).json({ error: 'Mode tidak valid. Gunakan "ewallet" atau "bank".' });
