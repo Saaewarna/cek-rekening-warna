@@ -15,11 +15,12 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: 'Parameter id dan provider wajib diisi untuk e-wallet.' });
     }
 
-    // handle khusus linkaja
-    if (provider === 'linkaja') {
+    const providerSafe = provider.toLowerCase();
+
+    if (providerSafe === 'linkaja') {
       url = `https://${process.env.RAPIDAPI_HOST}/cekewallet/${id}`;
     } else {
-      url = `https://${process.env.RAPIDAPI_HOST}/cek_ewallet/${id}/${provider}`;
+      url = `https://${process.env.RAPIDAPI_HOST}/cek_ewallet/${id}/${providerSafe}`;
     }
 
     headers['x-rapidapi-host'] = process.env.RAPIDAPI_HOST;
