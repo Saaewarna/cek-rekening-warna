@@ -15,7 +15,6 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: 'Parameter id dan provider wajib diisi untuk e-wallet.' });
     }
 
-    // khusus untuk linkaja pakai endpoint alternatif
     if (provider === 'linkaja') {
       url = `https://${process.env.RAPIDAPI_HOST}/cekwallet/${id}`;
     } else {
@@ -37,6 +36,7 @@ export default async function handler(req, res) {
   }
 
   try {
+    console.log('🔍 Final URL:', url);
     const response = await fetch(url, { method: 'GET', headers });
     const data = await response.json();
     res.status(200).json(data);
