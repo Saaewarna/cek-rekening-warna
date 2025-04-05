@@ -15,31 +15,33 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: 'Parameter id dan provider wajib diisi untuk e-wallet.' });
     }
 
-    // ✅ Khusus linkaja tanpa /provider di path
-if (provider === 'linkaja') {
-  url = `https://${process.env.RAPIDAPI_HOST}/cekewallet/${id}/${provider}`;
-} else {
-  url = `https://${process.env.RAPIDAPI_HOST}/cek_ewallet/${id}/${provider}`;
-}
-
+    // ✅ LinkAja pakai endpoint khusus tanpa /provider
+    if (provider === 'linkaja') {
+      url = `https://${process.env.RAPIDAPI_HOST}/cekewallet/${id}`;
+    } else {
+      url = `https://${process.env.RAPIDAPI_HOST}/cek_ewallet/${id}/${provider}`;
+    }
 
     headers['x-rapidapi-host'] = process.env.RAPIDAPI_HOST;
-  } else if (mode === 'bank') {
+  }
+
+  else if (mode === 'bank') {
     if (!bank || !rekening) {
       return res.status(400).json({ error: 'Parameter bank dan rekening wajib diisi untuk cek rekening.' });
     }
 
     url = `https://${process.env.RAPIDAPI_HOST_BANK}/check_bank_lq/${bank}/${rekening}`;
     headers['x-rapidapi-host'] = process.env.RAPIDAPI_HOST_BANK;
-  } else {
+  }
+
+  else {
     return res.status(400).json({ error: 'Mode tidak valid. Gunakan "ewallet" atau "bank".' });
   }
 
   try {
-    console.log('[DEBUG] Final URL:', url);
+    console.log(`[DEBUG] Fetching from: ${url}`);
     const response = await fetch(url, { method: 'GET', headers });
     const data = await response.json();
-
     res.status(200).json(data);
   } catch (error) {
     console.error('API error:', error);
