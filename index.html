@@ -2,12 +2,12 @@
 <html lang="id">
 <head>
   <meta charset="UTF-8">
-  <title>Cek Rek WarnaGroup</title>
+  <title>Cek Info Pembayaran</title>
   <script src="https://cdn.tailwindcss.com"></script>
 </head>
 <body class="min-h-screen bg-gray-100 flex items-center justify-center p-6">
   <div class="bg-white p-8 rounded-xl shadow-xl w-full max-w-md">
-    <h2 class="text-2xl font-bold mb-6 text-center text-blue-600">🔥 Cek Rek WarnaGroup</h2>
+    <h2 class="text-2xl font-bold mb-6 text-center text-blue-600">🔍 Cek Info Pembayaran</h2>
 
     <form id="paymentForm" class="space-y-4">
       <div>
@@ -83,7 +83,7 @@
     form.addEventListener("submit", async (e) => {
       e.preventDefault();
       const mode = modeSelect.value;
-      const id = document.getElementById("id").value.trim();
+      const id = document.getElementById("id").value;
       const provider = document.getElementById("provider").value;
       const bank = document.getElementById("bank").value;
 
@@ -91,7 +91,7 @@
 
       let query = `?mode=${mode}`;
       if (mode === "ewallet") {
-        query += `&id=${id}&provider=${provider}`;
+        query += `&id=${id}&provider=${provider.toLowerCase()}`;
       } else {
         query += `&bank=${bank}&rekening=${id}`;
       }
@@ -107,8 +107,8 @@
             resultBox.textContent = `❌ Tidak ditemukan atau tidak valid.`;
           }
         } else {
-          if (data.success && data.data && data.data.nama) {
-            resultBox.textContent = `✅ Nama: ${data.data.nama}\n🏦 Bank: ${data.data.nama_bank}\n🔢 Rekening: ${data.data.no_rekening}`;
+          if (data.success && data.data && data.data.nama && data.data.no_rekening) {
+            resultBox.textContent = `✅ Nama: ${data.data.nama}\n🏦 Bank: ${data.data.nama_bank || bank.toUpperCase()}\n🔢 Rekening: ${data.data.no_rekening}`;
           } else {
             resultBox.textContent = `❌ Nomor rekening tidak valid atau tidak ditemukan.`;
           }
