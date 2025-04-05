@@ -2,15 +2,14 @@
 <html lang="id">
 <head>
   <meta charset="UTF-8" />
-  <title>Cek Rekening - Warna Group</title>
+  <title>Cek Info Pembayaran</title>
   <script src="https://cdn.tailwindcss.com"></script>
 </head>
 <body class="min-h-screen bg-gray-100 flex items-center justify-center p-6">
   <div class="bg-white p-8 rounded-xl shadow-xl w-full max-w-md">
-    <h2 class="text-2xl font-bold mb-6 text-center text-blue-600">🔥 Cek Rekening - Warna Group</h2>
+    <h2 class="text-2xl font-bold mb-6 text-center text-blue-600">🔎 Cek Info Pembayaran</h2>
 
     <form id="checkForm" class="space-y-4">
-      <!-- Mode -->
       <div>
         <label for="mode" class="block font-semibold mb-1">Pilih Jenis Cek:</label>
         <select id="mode" class="w-full p-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-400">
@@ -19,10 +18,9 @@
         </select>
       </div>
 
-      <!-- E-Wallet Input -->
       <div id="ewalletFields">
         <label class="block font-semibold mb-1">Provider E-Wallet:</label>
-        <select id="provider" name="provider" class="w-full p-2 border rounded focus:outline-none focus:ring-2 focus:ring-green-400">
+        <select id="provider" class="w-full p-2 border rounded focus:outline-none focus:ring-2 focus:ring-green-400">
           <option value="shopeepay">ShopeePay</option>
           <option value="gopay">GoPay</option>
           <option value="ovo">OVO</option>
@@ -31,43 +29,39 @@
         </select>
 
         <label class="block font-semibold mt-4 mb-1">Nomor HP / ID:</label>
-        <input type="text" id="id" name="id" class="w-full p-2 border rounded focus:outline-none focus:ring-2 focus:ring-green-400" />
+        <input type="text" id="id" class="w-full p-2 border rounded focus:outline-none focus:ring-2 focus:ring-green-400" />
       </div>
 
-      <!-- Bank Input -->
       <div id="bankFields" class="hidden">
         <label class="block font-semibold mb-1">Bank:</label>
-        <select id="bank" name="bank" class="w-full p-2 border rounded focus:outline-none focus:ring-2 focus:ring-indigo-400">
-          <option value="bank_mandiri">Mandiri</option>
+        <select id="bank" class="w-full p-2 border rounded focus:outline-none focus:ring-2 focus:ring-indigo-400">
           <option value="bank_bca">BCA</option>
-          <option value="bank_bri">BRI</option>
           <option value="bank_bni">BNI</option>
-          <option value="bank_danamon">Danamon</option>
+          <option value="bank_bri">BRI</option>
+          <option value="bank_mandiri">Mandiri</option>
+          <option value="bank_cimb">CIMB Niaga</option>
+          <option value="bank_digibank">Digibank</option>
         </select>
 
         <label class="block font-semibold mt-4 mb-1">Nomor Rekening:</label>
-        <input type="text" id="rekening" name="rekening" class="w-full p-2 border rounded focus:outline-none focus:ring-2 focus:ring-indigo-400" />
+        <input type="text" id="rekening" class="w-full p-2 border rounded focus:outline-none focus:ring-2 focus:ring-indigo-400" />
       </div>
 
-      <!-- Tombol -->
       <button type="submit" class="w-full bg-blue-500 text-white py-2 rounded hover:bg-blue-600 transition-all duration-200">
         Cek Sekarang
       </button>
     </form>
 
-    <!-- Hasil -->
     <h3 class="mt-6 font-semibold text-gray-700">Hasil:</h3>
     <pre id="result" class="bg-gray-200 p-3 rounded text-sm text-gray-800">Belum dicek.</pre>
   </div>
 
-  <!-- Script -->
   <script>
     const mode = document.getElementById("mode");
     const ewalletFields = document.getElementById("ewalletFields");
     const bankFields = document.getElementById("bankFields");
     const resultBox = document.getElementById("result");
 
-    // Toggle field tampilan
     mode.addEventListener("change", () => {
       const isEwallet = mode.value === "ewallet";
       ewalletFields.classList.toggle("hidden", !isEwallet);
@@ -75,7 +69,6 @@
       resultBox.textContent = "Belum dicek.";
     });
 
-    // Submit handler
     document.getElementById("checkForm").addEventListener("submit", async (e) => {
       e.preventDefault();
       resultBox.textContent = "⏳ Sedang mengecek...";
@@ -110,7 +103,7 @@
           const rekening = document.getElementById("rekening").value.trim();
 
           if (!bank || !rekening) {
-            resultBox.textContent = "⚠️ Lengkapi semua field rekening bank.";
+            resultBox.textContent = "⚠️ Lengkapi semua field Rekening Bank.";
             return;
           }
 
