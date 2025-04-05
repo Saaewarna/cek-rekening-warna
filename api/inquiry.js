@@ -25,7 +25,11 @@ export default async function handler(req, res) {
       bank_mandiri: 'cek-nomor-rekening-bank-mandiri.p.rapidapi.com',
       bank_cimb: 'cek-nomor-rekening-cimb.p.rapidapi.com',
       bank_digibank: 'cek-nomor-rekening-digibank.p.rapidapi.com',
-      // tambahkan lagi sesuai kebutuhan
+      bank_bsi: 'cek-nomor-rekening-bsi-indonesia.p.rapidapi.com',
+      bank_btn: 'cek-nomor-rekening-btn.p.rapidapi.com',
+      bank_btpn: 'cek-nomor-rekening-btpn-jenius.p.rapidapi.com',
+      bank_danamon: 'cek-nomor-rekening-bank-danamon.p.rapidapi.com',
+      bank_permata: 'cek-nomor-rekening-bank-permata.p.rapidapi.com'
     };
 
     const selectedHost = bankHostMap[bank];
