@@ -2,76 +2,131 @@
 <html lang="id">
 <head>
   <meta charset="UTF-8">
-  <title>Cek E-Wallet - Warna</title>
-  <script src="https://cdn.tailwindcss.com"></script> <!-- TailwindCSS CDN -->
+  <title>Cek Info Pembayaran</title>
+  <script src="https://cdn.tailwindcss.com"></script>
 </head>
 <body class="min-h-screen bg-gray-100 flex items-center justify-center p-6">
   <div class="bg-white p-8 rounded-xl shadow-xl w-full max-w-md">
-    
-    <!-- 💳 Form Cek E-Wallet -->
-    <h2 class="text-2xl font-bold mb-6 text-center text-green-600">🔍 Cek Info E-Wallet Warna Group</h2>
+    <h2 class="text-2xl font-bold mb-6 text-center text-blue-600">🔎 Cek Info Pembayaran</h2>
 
-    <form id="walletForm" class="space-y-4">
+    <form id="checkForm" class="space-y-4">
+      <!-- Mode -->
       <div>
-        <label for="id" class="block font-semibold mb-1">Nomor HP / ID:</label>
-        <input type="text" id="id" name="id" required
-               class="w-full p-2 border rounded focus:outline-none focus:ring-2 focus:ring-green-400">
+        <label for="mode" class="block font-semibold mb-1">Pilih Jenis Cek:</label>
+        <select id="mode" class="w-full p-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-400">
+          <option value="ewallet">E-Wallet</option>
+          <option value="bank">Rekening Bank</option>
+        </select>
       </div>
 
-      <div>
-        <label for="provider" class="block font-semibold mb-1">Provider:</label>
-        <select id="provider" name="provider"
-                class="w-full p-2 border rounded focus:outline-none focus:ring-2 focus:ring-green-400">
+      <!-- Input E-Wallet -->
+      <div id="ewalletFields">
+        <label class="block font-semibold mb-1">Provider E-Wallet:</label>
+        <select id="provider" class="w-full p-2 border rounded focus:outline-none focus:ring-2 focus:ring-green-400">
           <option value="shopeepay">ShopeePay</option>
           <option value="gopay">GoPay</option>
           <option value="ovo">OVO</option>
           <option value="dana">DANA</option>
           <option value="linkaja">LinkAja</option>
         </select>
+
+        <label class="block font-semibold mt-4 mb-1">Nomor HP / ID:</label>
+        <input type="text" id="id" class="w-full p-2 border rounded focus:outline-none focus:ring-2 focus:ring-green-400" required>
       </div>
 
-      <button type="submit"
-              class="w-full bg-green-500 text-white py-2 rounded hover:bg-green-600 transition-all duration-200">
+      <!-- Input Bank -->
+      <div id="bankFields" class="hidden">
+        <label class="block font-semibold mb-1">Bank:</label>
+        <select id="bank" class="w-full p-2 border rounded focus:outline-none focus:ring-2 focus:ring-indigo-400">
+          <option value="bank_mandiri">Mandiri</option>
+          <option value="bank_bca">BCA</option>
+          <option value="bank_bri">BRI</option>
+          <option value="bank_bni">BNI</option>
+          <option value="bank_danamon">Danamon</option>
+        </select>
+
+        <label class="block font-semibold mt-4 mb-1">Nomor Rekening:</label>
+        <input type="text" id="rekening" class="w-full p-2 border rounded focus:outline-none focus:ring-2 focus:ring-indigo-400" required>
+      </div>
+
+      <!-- Tombol Submit -->
+      <button type="submit" class="w-full bg-blue-500 text-white py-2 rounded hover:bg-blue-600 transition-all duration-200">
         Cek Sekarang
       </button>
     </form>
 
-    <!-- 💬 Hasil Cek -->
+    <!-- Hasil -->
     <h3 class="mt-6 font-semibold text-gray-700">Hasil:</h3>
     <pre id="result" class="bg-gray-200 p-3 rounded text-sm text-gray-800">Belum dicek.</pre>
   </div>
 
-  <!-- 📜 Script E-Wallet -->
+  <!-- Script -->
   <script>
-  const form = document.getElementById("walletForm");
-  const resultBox = document.getElementById("result");
+    const mode = document.getElementById("mode");
+    const ewalletFields = document.getElementById("ewalletFields");
+    const bankFields = document.getElementById("bankFields");
+    const resultBox = document.getElementById("result");
 
-  form.addEventListener("submit", async (e) => {
-    e.preventDefault();
+    mode.addEventListener("change", () => {
+      const isEwallet = mode.value === "ewallet";
+      ewalletFields.classList.toggle("hidden", !isEwallet);
+      bankFields.classList.toggle("hidden", isEwallet);
+      resultBox.textContent = "Belum dicek.";
+    });
 
-    const id = document.getElementById("id").value;
-    const provider = document.getElementById("provider").value;
+    document.getElementById("checkForm").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      resultBox.textContent = "⏳ Sedang mengecek...";
 
-    resultBox.textContent = "⏳ Sedang mengecek...";
+      try {
+        let res, data;
 
-    try {
-      const res = await fetch(`/api/inquiry?id=${id}&provider=${provider}`);
-      const data = await res.json();
+        if (mode.value === "ewallet") {
+          const id = document.getElementById("id").value;
+          const provider = document.getElementById("provider").value;
 
-      if (data.success && data.data.status !== "INVALID_ACCOUNT_NUMBER") {
-        resultBox.textContent =
-          `✅ Wallet ditemukan:\n\n` +
-          `💳 Bank: ${data.data.bank}\n` +
-          `🧑 Nama: ${data.data.name || 'Tidak tersedia'}\n` +
-          `📱 Nomor: ${data.data.account_number}`;
-      } else {
-        resultBox.textContent = "❌ Nomor rekening invalid, yang betul dong.";
+          res = await fetch(`/api/inquiry?id=${id}&provider=${provider}`);
+          data = await res.json();
+
+          if (data.success && data.data.status !== "INVALID_ACCOUNT_NUMBER") {
+            resultBox.textContent =
+              `✅ Wallet ditemukan:\n\n` +
+              `💳 Bank: ${data.data.bank}\n` +
+              `👤 Nama: ${data.data.name || "Tidak tersedia"}\n` +
+              `🔢 Nomor: ${data.data.account_number}`;
+          } else {
+            resultBox.textContent = "❌ Wallet tidak ditemukan atau salah.";
+          }
+
+        } else if (mode.value === "bank") {
+          const bank = document.getElementById("bank").value;
+          const rekening = document.getElementById("rekening").value;
+
+          res = await fetch(`https://cek-nomor-rekening-bank.p.rapidapi.com/check_bank_lq/${bank}/${rekening}`, {
+            method: 'GET',
+            headers: {
+              'x-rapidapi-host': 'cek-nomor-rekening-bank.p.rapidapi.com',
+              'x-rapidapi-key': 'f25158c23dmshfe6d6692cc150e5p158bd1jsndeeb3f95e537'
+            }
+          });
+
+          data = await res.json();
+
+          if (data.status === true || data.success === true) {
+            resultBox.textContent =
+              `✅ Rekening ditemukan:\n\n` +
+              `🏦 Bank: ${bank}\n` +
+              `👤 Nama: ${data.data?.nama || "Tidak tersedia"}\n` +
+              `🔢 Rekening: ${rekening}`;
+          } else {
+            resultBox.textContent = "❌ Nomor rekening tidak valid atau tidak ditemukan.";
+          }
+        }
+      } catch (err) {
+        resultBox.textContent = "❌ Terjadi error saat memproses data.";
+        console.error(err);
       }
-
-    } catch (err) {
-      resultBox.textContent = "❌ Error nih ga ada nomornya ga valid.";
-    }
-  });
-</script>
+    });
+  </script>
 </body>
 </html>
