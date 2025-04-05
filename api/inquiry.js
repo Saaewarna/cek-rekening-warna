@@ -15,9 +15,15 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: 'Parameter id dan provider wajib diisi untuk e-wallet.' });
     }
 
-    // ✅ Semua e-wallet pakai format ini (dengan provider kapital)
     const formattedProvider = provider.toUpperCase();
-    url = `https://${process.env.RAPIDAPI_HOST}/cekwallet/${id}/${formattedProvider}`;
+
+    // 🚨 LinkAja gak pake provider di path
+    if (formattedProvider === 'LINKAJA') {
+      url = `https://${process.env.RAPIDAPI_HOST}/cekwallet/${id}`;
+    } else {
+      url = `https://${process.env.RAPIDAPI_HOST}/cekwallet/${id}/${formattedProvider}`;
+    }
+
     headers['x-rapidapi-host'] = process.env.RAPIDAPI_HOST;
 
   } else if (mode === 'bank') {
