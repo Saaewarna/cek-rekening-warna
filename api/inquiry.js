@@ -7,43 +7,36 @@ export default async function handler(req, res) {
 
   let url = '';
   let headers = {
-    'x-rapidapi-key': process.env.RAPIDAPI_KEY,
+    'x-rapidapi-key': process.env.RAPIDAPI_KEY
   };
 
-  try {
-    if (mode === 'ewallet') {
-      if (!id || !provider) {
-        return res.status(400).json({ error: 'Parameter id dan provider wajib diisi untuk e-wallet.' });
-      }
-
-      const ewalletBase = process.env.RAPIDAPI_HOST;
-      headers['x-rapidapi-host'] = ewalletBase;
-
-      // Adjust endpoint per provider
-      switch (provider) {
-        case 'shopeepay':
-        case 'gopay':
-        case 'ovo':
-        case 'linkaja':
-        case 'dana':
-          url = `https://${ewalletBase}/cekwallet/${id}`;
-          break;
-        default:
-          return res.status(400).json({ error: 'Provider tidak dikenali atau belum didukung.' });
-      }
-
-    } else if (mode === 'bank') {
-      if (!bank || !rekening) {
-        return res.status(400).json({ error: 'Parameter bank dan rekening wajib diisi untuk cek rekening.' });
-      }
-
-      const bankHost = process.env.RAPIDAPI_HOST_BANK;
-      headers['x-rapidapi-host'] = bankHost;
-      url = `https://${bankHost}/check_bank_lq/${bank}/${rekening}`;
-    } else {
-      return res.status(400).json({ error: 'Mode tidak valid. Gunakan "ewallet" atau "bank".' });
+  if (mode === 'ewallet') {
+    if (!id || !provider) {
+      return res.status(400).json({ error: 'Parameter id dan provider wajib diisi untuk e-wallet.' });
     }
 
+    // handle linkaja via custom endpoint
+    if (provider === 'linkaja') {
+      url = `https://${process.env.RAPIDAPI_HOST}/cekwallet/${id}`;
+    } else {
+      url = `https://${process.env.RAPIDAPI_HOST}/cek_ewallet/${id}/${provider}`;
+    }
+
+    headers['x-rapidapi-host'] = process.env.RAPIDAPI_HOST;
+
+  } else if (mode === 'bank') {
+    if (!bank || !rekening) {
+      return res.status(400).json({ error: 'Parameter bank dan rekening wajib diisi untuk cek rekening.' });
+    }
+
+    url = `https://${process.env.RAPIDAPI_HOST_BANK}/check_bank_lq/${bank}/${rekening}`;
+    headers['x-rapidapi-host'] = process.env.RAPIDAPI_HOST_BANK;
+
+  } else {
+    return res.status(400).json({ error: 'Mode tidak valid. Gunakan "ewallet" atau "bank".' });
+  }
+
+  try {
     const response = await fetch(url, { method: 'GET', headers });
     const data = await response.json();
     res.status(200).json(data);
