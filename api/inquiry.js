@@ -15,8 +15,7 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: 'Parameter id dan provider wajib diisi untuk e-wallet.' });
     }
 
-    // ✅ Tambahin /linkaja di path — karena RapidAPI pakai format ini
-    url = `https://${process.env.RAPIDAPI_HOST}/cekewallet/${id}/${provider}`;
+    url = `https://${process.env.RAPIDAPI_HOST}/cekwallet/${provider}/${id}`;
     headers['x-rapidapi-host'] = process.env.RAPIDAPI_HOST;
 
   } else if (mode === 'bank') {
