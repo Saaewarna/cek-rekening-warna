@@ -50,38 +50,41 @@ export default async function handler(req, res) {
     return res.status(400).json({ error: 'Mode tidak valid. Gunakan "ewallet" atau "bank".' });
   }
 
-  try {
-    console.log('[DEBUG] Final URL:', url);
-    const response = await fetch(url, { method: 'GET', headers });
-    const raw = await response.text();
+try {
+  console.log('[DEBUG] Final URL:', url);
+  const response = await fetch(url, { method: 'GET', headers });
+  const raw = await response.text();
 
-    console.log('[RAW RESPONSE]', raw);
+  console.log('[RAW RESPONSE]', raw);
 
-    let data;
-    try {
-      data = JSON.parse(raw);
-
-      if (
-        data.data &&
-        typeof data.data === "string" &&
-        (data.data.startsWith("{") || data.data.startsWith("["))
-      ) {
-        data.data = JSON.parse(data.data);
-      }
-
-    } catch (err) {
-      console.error('[PARSE ERROR]', err);
-      return res.status(500).json({ error: "Gagal parsing response" });
-    }
-
-    if (!response.ok) {
-      const errorMessage = data?.message || data?.error || 'Gagal ambil data dari API';
-      return res.status(response.status).json({ error: errorMessage });
-    }
-
-    res.status(200).json(data);
-  } catch (error) {
-    console.error('[API ERROR]', error);
-    res.status(500).json({ error: 'Internal Server Error' });
+  if (!raw || raw.trim() === '') {
+    return res.status(500).json({ error: "API tidak memberikan response (kosong)." });
   }
+
+  let data;
+  try {
+    data = JSON.parse(raw);
+
+    if (
+      data.data &&
+      typeof data.data === "string" &&
+      (data.data.startsWith("{") || data.data.startsWith("["))
+    ) {
+      data.data = JSON.parse(data.data);
+    }
+
+  } catch (err) {
+    console.error('[PARSE ERROR]', err);
+    return res.status(500).json({ error: "Gagal parsing response JSON dari API." });
+  }
+
+  if (!response.ok) {
+    const errorMessage = data?.message || data?.error || 'Gagal ambil data dari API';
+    return res.status(response.status).json({ error: errorMessage });
+  }
+
+  res.status(200).json(data);
+} catch (error) {
+  console.error('[API ERROR]', error);
+  res.status(500).json({ error: 'Internal Server Error' });
 }
