@@ -26,14 +26,52 @@ export default async function handler(req, res) {
 
     headers['x-rapidapi-host'] = process.env.RAPIDAPI_HOST;
 
-  } else if (mode === 'bank') {
-    if (!sanitizedBank || !sanitizedRekening) {
-      return res.status(400).json({ error: 'Parameter bank dan rekening wajib diisi untuk cek rekening.' });
-    }
+} else if (mode === 'bank') {
+  if (!sanitizedBank || !sanitizedRekening) {
+    return res.status(400).json({ error: 'Parameter bank dan rekening wajib diisi untuk cek rekening.' });
+  }
 
-    url = `https://${process.env.RAPIDAPI_HOST_BANK}/check_bank_lq/${sanitizedBank}/${sanitizedRekening}`;
-    headers['x-rapidapi-host'] = process.env.RAPIDAPI_HOST_BANK;
+  const hostMap = {
+    bank_bca: "cek-nomor-rekening-bca.p.rapidapi.com",
+    bank_bni: "cek-nomor-rekening-bni.p.rapidapi.com",
+    bank_bri: "cek-nomor-rekening-bri.p.rapidapi.com",
+    bank_mandiri: "cek-nomor-rekening-mandiri.p.rapidapi.com",
+    bank_btn: "cek-nomor-rekening-btn.p.rapidapi.com",
+    bank_danamon: "cek-nomor-rekening-bank-danamon.p.rapidapi.com",
+    bank_btpn: "cek-nomor-rekening-btpn-jenius.p.rapidapi.com",
+    bank_bsi: "cek-nomor-rekening-bsi-indonesia.p.rapidapi.com",
+    bank_digibank: "cek-nomor-rekening-digibank.p.rapidapi.com",
+    bank_permata: "cek-nomor-rekening-bank-permata.p.rapidapi.com",
+    bank_cimb_niaga: "cek-nomor-rekening-cimb-niaga.p.rapidapi.com",
+    bank_dbs_indonesia: "cek-nomor-rekening-dbs-indonesia.p.rapidapi.com"
+  };
 
+  const pathMap = {
+    bank_bca: "check_bank_lq/bank_bca",
+    bank_bni: "check_bank_lq/bank_bni",
+    bank_bri: "check_bank_lq/bank_bri",
+    bank_mandiri: "check_bank_lq/bank_mandiri",
+    bank_btn: "check_bank_lq/bank_btn",
+    bank_danamon: "check_bank_lq/bank_danamon",
+    bank_btpn: "check_bank_lq/bank_btpn",
+    bank_bsi: "check_bank_lq/bank_bsi",
+    bank_digibank: "check_bank_lq/bank_digibank",
+    bank_permata: "check_bank_lq/bank_permata",
+    bank_cimb_niaga: "check_bank_lq/bank_cimb_niaga",
+    bank_dbs_indonesia: "check_bank_lq/bank_dbs_indonesia"
+  };
+
+  const selectedHost = hostMap[sanitizedBank];
+  const selectedPath = pathMap[sanitizedBank];
+
+  if (!selectedHost || !selectedPath) {
+    return res.status(400).json({ error: 'Bank tidak didukung.' });
+  }
+
+  url = `https://${selectedHost}/${selectedPath}/${sanitizedRekening}`;
+  headers["x-rapidapi-host"] = selectedHost;
+}
+  
   } else {
     return res.status(400).json({ error: 'Mode tidak valid. Gunakan "ewallet" atau "bank".' });
   }
