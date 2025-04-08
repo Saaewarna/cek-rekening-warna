@@ -123,7 +123,7 @@
               💼 <strong>Wallet:</strong> ${data.data.bank}
             </div>
           `;
-        } else if (mode === "bank" && data.data?.status === "VALID") {
+            } else if (mode === "bank" && data.success && data.data?.nama) {
           resultBox.innerHTML = `
             <div class="text-left text-sm">
               ✅ <strong>Nama:</strong> ${data.data.nama}<br />
