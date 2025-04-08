@@ -31,8 +31,7 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: 'Parameter bank dan rekening wajib diisi untuk cek rekening.' });
     }
 
-    // ✅ GUNAKAN API UTAMA (bukan per bank)
-    const selectedHost = "cek-nomor-rekening-bank.p.rapidapi.com";
+    const selectedHost = process.env.RAPIDAPI_HOST_BANK;
     const supportedBanks = [
       'bank_bca', 'bank_bni', 'bank_bri', 'bank_mandiri', 'bank_btn',
       'bank_danamon', 'bank_btpn', 'bank_bsi', 'bank_digibank',
@@ -51,29 +50,30 @@ export default async function handler(req, res) {
     return res.status(400).json({ error: 'Mode tidak valid. Gunakan "ewallet" atau "bank".' });
   }
 
-try {
-  console.log('[DEBUG] Final URL:', url);
-  const response = await fetch(url, { method: 'GET', headers });
-  const raw = await response.text();
-
-  let data;
   try {
-    data = JSON.parse(raw);
-    if (typeof data.data === "string") {
-      data.data = JSON.parse(data.data); // 🧠 fix penting di sini
+    console.log('[DEBUG] Final URL:', url);
+    const response = await fetch(url, { method: 'GET', headers });
+    const raw = await response.text();
+
+    let data;
+    try {
+      data = JSON.parse(raw);
+      if (typeof data.data === "string") {
+        data.data = JSON.parse(data.data); // 🧠 parse ulang kalau string
+      }
+    } catch (err) {
+      return res.status(500).json({ error: "Gagal parsing response" });
     }
-  } catch (err) {
-    return res.status(500).json({ error: "Gagal parsing response" });
-  }
 
-  if (!response.ok) {
-    const errorMessage = data?.message || data?.error || 'Gagal ambil data dari API';
-    return res.status(response.status).json({ error: errorMessage });
-  }
+    if (!response.ok) {
+      const errorMessage = data?.message || data?.error || 'Gagal ambil data dari API';
+      return res.status(response.status).json({ error: errorMessage });
+    }
 
-  console.log(`[INQUIRY] mode: ${mode}, provider: ${provider}, id: ${id}, bank: ${bank}, rekening: ${rekening}`);
-  res.status(200).json(data);
-} catch (error) {
-  console.error('API error:', error);
-  res.status(500).json({ error: 'Internal Server Error' });
+    console.log(`[INQUIRY] mode: ${mode}, provider: ${provider}, id: ${id}, bank: ${bank}, rekening: ${rekening}`);
+    res.status(200).json(data);
+  } catch (error) {
+    console.error('API error:', error);
+    res.status(500).json({ error: 'Internal Server Error' });
+  }
 }
