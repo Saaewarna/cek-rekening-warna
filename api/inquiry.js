@@ -60,7 +60,8 @@ export default async function handler(req, res) {
       const errorMessage = data?.message || data?.error || 'Gagal ambil data dari API';
       return res.status(response.status).json({ error: errorMessage });
     }
-
+    console.log("[HEADERS]", headers);
+    console.log("[FULL URL]", url);
     console.log(`[INQUIRY] mode: ${mode}, provider: ${provider}, id: ${id}, bank: ${bank}, rekening: ${rekening}`);
 
     res.status(200).json(data);
