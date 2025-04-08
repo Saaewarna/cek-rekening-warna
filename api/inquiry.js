@@ -5,31 +5,35 @@ export default async function handler(req, res) {
     return res.status(400).json({ error: 'Parameter mode wajib diisi (ewallet/bank).' });
   }
 
+  const sanitizedId = id?.trim();
+  const sanitizedProvider = provider?.trim();
+  const sanitizedBank = bank?.trim();
+  const sanitizedRekening = rekening?.trim();
+
   let url = '';
   const headers = {
     'x-rapidapi-key': process.env.RAPIDAPI_KEY,
   };
 
   if (mode === 'ewallet') {
-    if (!id || !provider) {
+    if (!sanitizedId || !sanitizedProvider) {
       return res.status(400).json({ error: 'Parameter id dan provider wajib diisi untuk e-wallet.' });
     }
 
-    // LINKAJA pakai uppercase dan endpoint berbeda
-    if (provider.toLowerCase() === 'linkaja') {
-      url = `https://${process.env.RAPIDAPI_HOST}/cekewallet/${id}/LINKAJA`;
-    } else {
-      url = `https://${process.env.RAPIDAPI_HOST}/cek_ewallet/${id}/${provider.toLowerCase()}`;
-    }
+    url = sanitizedProvider.toLowerCase() === 'linkaja'
+      ? `https://${process.env.RAPIDAPI_HOST}/cekewallet/${sanitizedId}/LINKAJA`
+      : `https://${process.env.RAPIDAPI_HOST}/cek_ewallet/${sanitizedId}/${sanitizedProvider.toLowerCase()}`;
 
     headers['x-rapidapi-host'] = process.env.RAPIDAPI_HOST;
+
   } else if (mode === 'bank') {
-    if (!bank || !rekening) {
+    if (!sanitizedBank || !sanitizedRekening) {
       return res.status(400).json({ error: 'Parameter bank dan rekening wajib diisi untuk cek rekening.' });
     }
 
-    url = `https://${process.env.RAPIDAPI_HOST_BANK}/check_bank_lq/${bank}/${rekening}`;
+    url = `https://${process.env.RAPIDAPI_HOST_BANK}/check_bank_lq/${sanitizedBank}/${sanitizedRekening}`;
     headers['x-rapidapi-host'] = process.env.RAPIDAPI_HOST_BANK;
+
   } else {
     return res.status(400).json({ error: 'Mode tidak valid. Gunakan "ewallet" atau "bank".' });
   }
@@ -38,6 +42,13 @@ export default async function handler(req, res) {
     console.log('[DEBUG] Final URL:', url);
     const response = await fetch(url, { method: 'GET', headers });
     const data = await response.json();
+
+    if (!response.ok) {
+      const errorMessage = data?.message || data?.error || 'Gagal ambil data dari API';
+      return res.status(response.status).json({ error: errorMessage });
+    }
+
+    console.log(`[INQUIRY] mode: ${mode}, provider: ${provider}, id: ${id}, bank: ${bank}, rekening: ${rekening}`);
 
     res.status(200).json(data);
   } catch (error) {
