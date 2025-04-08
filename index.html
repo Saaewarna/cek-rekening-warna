@@ -4,11 +4,12 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>🔥 WarnaGroup Cekrek</title>
+  <link rel="icon" type="image/png" href="https://images.icon-icons.com/2746/PNG/512/rainbow_icon_175988.png">
   <script src="https://cdn.tailwindcss.com"></script>
 </head>
 <body class="bg-gray-100 min-h-screen flex items-center justify-center p-4">
   <div class="bg-white p-8 rounded-xl shadow-lg max-w-md w-full">
-    <h1 class="text-2xl font-bold text-blue-600 mb-6 text-center">🔥 WarnaGroup Cekrek</h1>
+    <h1 class="text-2xl font-bold text-blue-600 mb-4 text-center">🔥 WarnaGroup Cekrek</h1>
 
     <form id="paymentForm" class="space-y-4">
       <div>
@@ -50,7 +51,7 @@
 
       <div>
         <label for="id" id="idLabel" class="block font-medium">Nomor HP / ID:</label>
-        <input id="id" type="text" class="w-full p-2 border rounded" placeholder="Masukkan nomor" />
+      <input id="id" type="text" autocomplete="off" class="w-full p-2 border rounded" placeholder="Masukkan nomor" autofocus />
       </div>
 
       <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white w-full py-2 rounded">
@@ -58,8 +59,8 @@
       </button>
     </form>
 
-    <div id="resultBox" class="mt-6 p-4 rounded bg-gray-100 text-sm text-gray-800 text-center">
-      <span>🔍 Masukkin Datanya.</span>
+        <div id="resultBox" class="mt-6 p-4 rounded bg-gray-100 text-sm text-gray-800 text-center break-words">
+      🔍 Masukkan datanya.
     </div>
   </div>
 
@@ -72,64 +73,71 @@
 
     modeSelect.addEventListener("change", () => {
       const isEwallet = modeSelect.value === "ewallet";
-      providerWrapper.style.display = isEwallet ? "block" : "none";
-      bankWrapper.style.display = isEwallet ? "none" : "block";
+      providerWrapper.classList.toggle("hidden", !isEwallet);
+      bankWrapper.classList.toggle("hidden", isEwallet);
       idLabel.textContent = isEwallet ? "Nomor HP / ID:" : "Nomor Rekening:";
     });
 
     document.getElementById("paymentForm").addEventListener("submit", async (e) => {
       e.preventDefault();
 
-      const mode = document.getElementById("mode").value;
+      const mode = modeSelect.value;
       const id = document.getElementById("id").value.trim();
       const provider = document.getElementById("provider").value;
       const bank = document.getElementById("bank").value;
 
       if (!id) {
-        resultBox.innerHTML = `<div class="text-center">🔍 Masukkin Datanya.</div>`;
+        resultBox.innerHTML = `<div class="text-center">🔍 Masukkan datanya dulu ya.</div>`;
         return;
       }
 
-      resultBox.innerHTML = `<div class="text-center">⏳ Sedang memproses...</div>`;
+      resultBox.innerHTML = `
+      <div class="flex flex-col items-center justify-center gap-2 my-4">
+      <div class="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-blue-500"></div>
+       <p class="text-blue-500 text-sm">⏳ Sedang memproses...</p>
+       </div>
+       `;
+
 
       let query = `?mode=${mode}`;
       if (mode === "ewallet") {
-        query += `&id=${id}&provider=${provider}`;
+        query += `&id=${encodeURIComponent(id)}&provider=${encodeURIComponent(provider)}`;
       } else {
-        query += `&bank=${bank}&rekening=${id}`;
+        query += `&bank=${encodeURIComponent(bank)}&rekening=${encodeURIComponent(id)}`;
       }
 
       try {
         const res = await fetch(`/api/inquiry${query}`);
         const data = await res.json();
 
-        if (!res.ok || !data.success) {
-          resultBox.innerHTML = `<div class="text-center text-red-600">❌ Tidak ditemukan atau tidak valid.</div>`;
+        if (!res.ok || !data || data.error) {
+          resultBox.innerHTML = `<div class="text-red-600 text-center">❌ ${data?.error || "Gagal cek data."}</div>`;
           return;
         }
 
-        if (mode === "ewallet" && data.data.status === "SUCCESS") {
+        if (mode === "ewallet" && data.data?.status === "SUCCESS") {
           resultBox.innerHTML = `
             <div class="text-left text-sm">
-              ✅ <strong>Nama:</strong> ${data.data.name}<br>
-              🔢 <strong>ID:</strong> ${data.data.account_number}<br>
-              💼 <strong>Wallet:</strong> ${data.data.bank.toLowerCase()}
+              ✅ <strong>Nama:</strong> ${data.data.name}<br />
+              🔢 <strong>ID:</strong> ${data.data.account_number}<br />
+              💼 <strong>Wallet:</strong> ${data.data.bank}
             </div>
           `;
-        } else if (mode === "bank") {
+        } else if (mode === "bank" && data.data?.status === "VALID") {
           resultBox.innerHTML = `
             <div class="text-left text-sm">
-              ✅ <strong>Nama:</strong> ${data.data.nama}<br>
-              🔢 <strong>Rekening:</strong> ${data.data.no_rekening}<br>
+              ✅ <strong>Nama:</strong> ${data.data.nama}<br />
+              🔢 <strong>Rekening:</strong> ${data.data.no_rekening}<br />
               🏦 <strong>Bank:</strong> ${data.data.nama_bank}
             </div>
           `;
         } else {
-          resultBox.innerHTML = `<div class="text-center text-red-600">❌ Tidak ditemukan atau tidak valid.</div>`;
+          resultBox.innerHTML = `<div class="text-red-600 text-center">❌ Tidak ditemukan atau tidak valid.</div>`;
         }
+
       } catch (err) {
         console.error(err);
-        resultBox.innerHTML = `<div class="text-center text-red-600">❌ Gagal memproses data. Coba lagi nanti.</div>`;
+        resultBox.innerHTML = `<div class="text-red-600 text-center">❌ Gagal memproses. Coba lagi nanti.</div>`;
       }
     });
   </script>
