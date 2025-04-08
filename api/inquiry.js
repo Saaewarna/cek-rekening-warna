@@ -20,18 +20,18 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: 'Parameter id dan provider wajib diisi untuk e-wallet.' });
     }
 
-    const host = process.env.RAPIDAPI_HOST;
-    headers['x-rapidapi-host'] = host;
-
     url = sanitizedProvider.toLowerCase() === 'linkaja'
-      ? `https://${host}/cekewallet/${sanitizedId}/LINKAJA`
-      : `https://${host}/cek_ewallet/${sanitizedId}/${sanitizedProvider.toLowerCase()}`;
+      ? `https://${process.env.RAPIDAPI_HOST}/cekewallet/${sanitizedId}/LINKAJA`
+      : `https://${process.env.RAPIDAPI_HOST}/cek_ewallet/${sanitizedId}/${sanitizedProvider.toLowerCase()}`;
+
+    headers['x-rapidapi-host'] = process.env.RAPIDAPI_HOST;
 
   } else if (mode === 'bank') {
     if (!sanitizedBank || !sanitizedRekening) {
       return res.status(400).json({ error: 'Parameter bank dan rekening wajib diisi untuk cek rekening.' });
     }
 
+    const selectedHost = process.env.RAPIDAPI_HOST_BANK;
     const supportedBanks = [
       'bank_bca', 'bank_bni', 'bank_bri', 'bank_mandiri', 'bank_btn',
       'bank_danamon', 'bank_btpn', 'bank_bsi', 'bank_digibank',
@@ -42,10 +42,9 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: 'Bank tidak didukung.' });
     }
 
-    const host = process.env.RAPIDAPI_HOST_BANK;
-    headers['x-rapidapi-host'] = host;
-
-    url = `https://${host}/check_bank_lq/${sanitizedBank}/${sanitizedRekening}`;
+    const path = `check_bank_lq/${sanitizedBank}`;
+    url = `https://${selectedHost}/${path}/${sanitizedRekening}`;
+    headers['x-rapidapi-host'] = selectedHost;
   } else {
     return res.status(400).json({ error: 'Mode tidak valid. Gunakan "ewallet" atau "bank".' });
   }
@@ -53,39 +52,31 @@ export default async function handler(req, res) {
   try {
     console.log('[DEBUG] Final URL:', url);
     const response = await fetch(url, { method: 'GET', headers });
-const raw = await response.text();
-console.log('[RAW RESPONSE]', raw);
+    const raw = await response.text();
+    console.log('[RAW]', raw);
 
-if (!response.ok || !raw || raw.trim() === "") {
-  return res.status(response.status).json({
-    error: `API error: ${raw || 'No response'}`
-  });
-}
-
-let data;
-try {
-  data = JSON.parse(raw);
-  if (
-    data.data &&
-    typeof data.data === "string" &&
-    (data.data.startsWith("{") || data.data.startsWith("["))
-  ) {
-    data.data = JSON.parse(data.data);
-  }
-} catch (err) {
-  console.error('[PARSE ERROR]', err);
-  return res.status(500).json({
-    error: `Gagal parsing response dari API: ${raw}`
-  });
-}
-    if (!response.ok) {
-      const errorMessage = data?.message || data?.error || 'Gagal ambil data dari API';
-      return res.status(response.status).json({ error: errorMessage });
+    if (!response.ok || !raw || raw.trim() === '') {
+      return res.status(response.status).json({ error: `API error: ${raw || 'No response'}` });
     }
 
-    res.status(200).json(data);
+    let data;
+    try {
+      data = JSON.parse(raw);
+      if (
+        data.data &&
+        typeof data.data === "string" &&
+        (data.data.startsWith("{") || data.data.startsWith("["))
+      ) {
+        data.data = JSON.parse(data.data);
+      }
+    } catch (err) {
+      console.error('[PARSE ERROR]', err);
+      return res.status(500).json({ error: `Gagal parsing response JSON dari API: ${raw}` });
+    }
+
+    return res.status(200).json(data);
   } catch (error) {
     console.error('[API ERROR]', error);
-    res.status(500).json({ error: 'Internal Server Error' });
+    return res.status(500).json({ error: 'Internal Server Error' });
   }
 }
