@@ -53,30 +53,31 @@ export default async function handler(req, res) {
   try {
     console.log('[DEBUG] Final URL:', url);
     const response = await fetch(url, { method: 'GET', headers });
-    const raw = await response.text();
+const raw = await response.text();
+console.log('[RAW RESPONSE]', raw);
 
-    console.log('[RAW RESPONSE]', raw);
+if (!response.ok || !raw || raw.trim() === "") {
+  return res.status(response.status).json({
+    error: `API error: ${raw || 'No response'}`
+  });
+}
 
-    if (!raw || raw.trim() === '') {
-      return res.status(500).json({ error: "API tidak memberikan response (kosong)." });
-    }
-
-    let data;
-    try {
-      data = JSON.parse(raw);
-
-      if (
-        data.data &&
-        typeof data.data === "string" &&
-        (data.data.startsWith("{") || data.data.startsWith("["))
-      ) {
-        data.data = JSON.parse(data.data);
-      }
-    } catch (err) {
-      console.error('[PARSE ERROR]', err);
-      return res.status(500).json({ error: "Gagal parsing response JSON dari API." });
-    }
-
+let data;
+try {
+  data = JSON.parse(raw);
+  if (
+    data.data &&
+    typeof data.data === "string" &&
+    (data.data.startsWith("{") || data.data.startsWith("["))
+  ) {
+    data.data = JSON.parse(data.data);
+  }
+} catch (err) {
+  console.error('[PARSE ERROR]', err);
+  return res.status(500).json({
+    error: `Gagal parsing response dari API: ${raw}`
+  });
+}
     if (!response.ok) {
       const errorMessage = data?.message || data?.error || 'Gagal ambil data dari API';
       return res.status(response.status).json({ error: errorMessage });
