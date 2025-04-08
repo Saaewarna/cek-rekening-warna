@@ -55,15 +55,21 @@ export default async function handler(req, res) {
     const response = await fetch(url, { method: 'GET', headers });
     const raw = await response.text();
 
-    let data;
-    try {
-      data = JSON.parse(raw);
-      if (typeof data.data === "string") {
-        data.data = JSON.parse(data.data); // 🧠 parse ulang kalau string
-      }
-    } catch (err) {
-      return res.status(500).json({ error: "Gagal parsing response" });
-    }
+let data;
+try {
+  data = JSON.parse(raw);
+
+  if (
+    data.data &&
+    typeof data.data === "string" &&
+    (data.data.startsWith("{") || data.data.startsWith("["))
+  ) {
+    data.data = JSON.parse(data.data); // parse hanya kalau memang bentuk string JSON
+  }
+
+} catch (err) {
+  return res.status(500).json({ error: "Gagal parsing response" });
+}
 
     if (!response.ok) {
       const errorMessage = data?.message || data?.error || 'Gagal ambil data dari API';
