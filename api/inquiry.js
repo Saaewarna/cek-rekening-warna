@@ -53,31 +53,35 @@ export default async function handler(req, res) {
 try {
   console.log('[DEBUG] Final URL:', url);
   const response = await fetch(url, { method: 'GET', headers });
-  const raw = await response.text();
+const raw = await response.text();
+console.log('[RAW RESPONSE]', raw);
 
-  console.log('[RAW RESPONSE]', raw);
+// Jika kosong, jangan diparse
+if (!raw || raw.trim() === '') {
+  return res.status(502).json({ error: 'API tidak merespon atau memberikan data kosong.' });
+}
 
-  if (!raw || raw.trim() === '') {
-    return res.status(500).json({ error: "API tidak memberikan response (kosong)." });
+let data;
+try {
+  data = JSON.parse(raw);
+
+  if (
+    data.data &&
+    typeof data.data === "string" &&
+    (data.data.startsWith("{") || data.data.startsWith("["))
+  ) {
+    data.data = JSON.parse(data.data);
   }
 
-  let data;
-  try {
-    data = JSON.parse(raw);
+} catch (err) {
+  console.error('[PARSE ERROR]', err);
+  return res.status(500).json({ error: 'Gagal parsing JSON dari API.' });
+}
 
-    if (
-      data.data &&
-      typeof data.data === "string" &&
-      (data.data.startsWith("{") || data.data.startsWith("["))
-    ) {
-      data.data = JSON.parse(data.data);
-    }
-
-  } catch (err) {
-    console.error('[PARSE ERROR]', err);
-    return res.status(500).json({ error: "Gagal parsing response JSON dari API." });
-  }
-
+  if (!data?.success) {
+  return res.status(404).json({ error: 'Data tidak ditemukan. Mungkin ID/rekening salah atau tidak terdaftar.' });
+}
+  
   if (!response.ok) {
     const errorMessage = data?.message || data?.error || 'Gagal ambil data dari API';
     return res.status(response.status).json({ error: errorMessage });
