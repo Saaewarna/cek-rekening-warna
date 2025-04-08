@@ -51,22 +51,21 @@ export default async function handler(req, res) {
     return res.status(400).json({ error: 'Mode tidak valid. Gunakan "ewallet" atau "bank".' });
   }
 
-  try {
-    console.log('[DEBUG] Final URL:', url);
-    const response = await fetch(url, { method: 'GET', headers });
-    const data = await response.json();
+try {
+  console.log('[DEBUG] Final URL:', url);
+  const response = await fetch(url, { method: 'GET', headers });
+  const text = await response.text(); // ambil raw response dulu
+  console.log('[DEBUG] Raw response:', text);
 
-    if (!response.ok) {
-      const errorMessage = data?.message || data?.error || 'Gagal ambil data dari API';
-      return res.status(response.status).json({ error: errorMessage });
-    }
-    console.log("[HEADERS]", headers);
-    console.log("[FULL URL]", url);
-    console.log(`[INQUIRY] mode: ${mode}, provider: ${provider}, id: ${id}, bank: ${bank}, rekening: ${rekening}`);
+  const data = JSON.parse(text); // lalu parse JSON-nya
 
-    res.status(200).json(data);
-  } catch (error) {
-    console.error('API error:', error);
-    res.status(500).json({ error: 'Internal Server Error' });
+  if (!response.ok) {
+    const errorMessage = data?.message || data?.error || 'Gagal ambil data dari API';
+    return res.status(response.status).json({ error: errorMessage });
   }
+
+  res.status(200).json(data);
+} catch (error) {
+  console.error('API error:', error);
+  return res.status(500).json({ error: 'Internal Server Error', message: error.message });
 }
