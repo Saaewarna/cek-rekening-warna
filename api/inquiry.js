@@ -54,18 +54,26 @@ export default async function handler(req, res) {
 try {
   console.log('[DEBUG] Final URL:', url);
   const response = await fetch(url, { method: 'GET', headers });
-  const text = await response.text(); // ambil raw response dulu
-  console.log('[DEBUG] Raw response:', text);
+  const raw = await response.text();
 
-  const data = JSON.parse(text); // lalu parse JSON-nya
+  let data;
+  try {
+    data = JSON.parse(raw);
+    if (typeof data.data === "string") {
+      data.data = JSON.parse(data.data); // 🧠 fix penting di sini
+    }
+  } catch (err) {
+    return res.status(500).json({ error: "Gagal parsing response" });
+  }
 
   if (!response.ok) {
     const errorMessage = data?.message || data?.error || 'Gagal ambil data dari API';
     return res.status(response.status).json({ error: errorMessage });
   }
 
+  console.log(`[INQUIRY] mode: ${mode}, provider: ${provider}, id: ${id}, bank: ${bank}, rekening: ${rekening}`);
   res.status(200).json(data);
 } catch (error) {
   console.error('API error:', error);
-  return res.status(500).json({ error: 'Internal Server Error', message: error.message });
+  res.status(500).json({ error: 'Internal Server Error' });
 }
