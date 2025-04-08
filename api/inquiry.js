@@ -31,45 +31,21 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: 'Parameter bank dan rekening wajib diisi untuk cek rekening.' });
     }
 
-    const hostMap = {
-      bank_bca: "cek-nomor-rekening-bca.p.rapidapi.com",
-      bank_bni: "cek-nomor-rekening-bni.p.rapidapi.com",
-      bank_bri: "cek-nomor-rekening-bri.p.rapidapi.com",
-      bank_mandiri: "cek-nomor-rekening-mandiri.p.rapidapi.com",
-      bank_btn: "cek-nomor-rekening-btn.p.rapidapi.com",
-      bank_danamon: "cek-nomor-rekening-bank-danamon.p.rapidapi.com",
-      bank_btpn: "cek-nomor-rekening-btpn-jenius.p.rapidapi.com",
-      bank_bsi: "cek-nomor-rekening-bsi-indonesia.p.rapidapi.com",
-      bank_digibank: "cek-nomor-rekening-digibank.p.rapidapi.com",
-      bank_permata: "cek-nomor-rekening-bank-permata.p.rapidapi.com",
-      bank_cimb_niaga: "cek-nomor-rekening-cimb-niaga.p.rapidapi.com",
-      bank_dbs_indonesia: "cek-nomor-rekening-dbs-indonesia.p.rapidapi.com"
-    };
+    // ✅ GUNAKAN API UTAMA (bukan per bank)
+    const selectedHost = "cek-nomor-rekening-bank.p.rapidapi.com";
+    const supportedBanks = [
+      'bank_bca', 'bank_bni', 'bank_bri', 'bank_mandiri', 'bank_btn',
+      'bank_danamon', 'bank_btpn', 'bank_bsi', 'bank_digibank',
+      'bank_permata', 'bank_cimb_niaga', 'bank_dbs_indonesia'
+    ];
 
-    const pathMap = {
-      bank_bca: "check_bank_lq/bank_bca",
-      bank_bni: "check_bank_lq/bank_bni",
-      bank_bri: "check_bank_lq/bank_bri",
-      bank_mandiri: "check_bank_lq/bank_mandiri",
-      bank_btn: "check_bank_lq/bank_btn",
-      bank_danamon: "check_bank_lq/bank_danamon",
-      bank_btpn: "check_bank_lq/bank_btpn",
-      bank_bsi: "check_bank_lq/bank_bsi",
-      bank_digibank: "check_bank_lq/bank_digibank",
-      bank_permata: "check_bank_lq/bank_permata",
-      bank_cimb_niaga: "check_bank_lq/bank_cimb_niaga",
-      bank_dbs_indonesia: "check_bank_lq/bank_dbs_indonesia"
-    };
-
-    const selectedHost = hostMap[sanitizedBank];
-    const selectedPath = pathMap[sanitizedBank];
-
-    if (!selectedHost || !selectedPath) {
+    if (!supportedBanks.includes(sanitizedBank)) {
       return res.status(400).json({ error: 'Bank tidak didukung.' });
     }
 
-    url = `https://${selectedHost}/${selectedPath}/${sanitizedRekening}`;
-    headers["x-rapidapi-host"] = selectedHost;
+    const path = `check_bank_lq/${sanitizedBank}`;
+    url = `https://${selectedHost}/${path}/${sanitizedRekening}`;
+    headers['x-rapidapi-host'] = selectedHost;
 
   } else {
     return res.status(400).json({ error: 'Mode tidak valid. Gunakan "ewallet" atau "bank".' });
@@ -86,8 +62,8 @@ export default async function handler(req, res) {
     }
 
     console.log(`[INQUIRY] mode: ${mode}, provider: ${provider}, id: ${id}, bank: ${bank}, rekening: ${rekening}`);
-    res.status(200).json(data);
 
+    res.status(200).json(data);
   } catch (error) {
     console.error('API error:', error);
     res.status(500).json({ error: 'Internal Server Error' });
