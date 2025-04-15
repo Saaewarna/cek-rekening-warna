@@ -64,6 +64,16 @@
     </div>
   </div>
 
+    <script>
+    document.addEventListener("keydown", function (e) {
+      if (e.key === "F12" || (e.ctrlKey && e.shiftKey && ["I", "J", "C"].includes(e.key)) || (e.ctrlKey && ["u", "s"].includes(e.key.toLowerCase()))) {
+        e.preventDefault();
+      }
+    });
+
+    document.addEventListener('contextmenu', e => e.preventDefault());
+  </script>
+
   <script>
     const modeSelect = document.getElementById("mode");
     const providerWrapper = document.getElementById("providerWrapper");
