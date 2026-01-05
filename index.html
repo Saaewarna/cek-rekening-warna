@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>WarnaGroup Cekrek — Modern Inquiry</title>
+  <title>WarnaGroup Cekrek — Premium Inquiry</title>
   <link rel="icon" type="image/png" href="https://images.icon-icons.com/2746/PNG/512/rainbow_icon_175988.png">
   <script src="https://cdn.tailwindcss.com"></script>
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -24,33 +24,59 @@
       to { opacity: 1; transform: translateY(0); }
     }
     .animate-result { animation: slideUp 0.4s ease-out forwards; }
+    .loader {
+      border: 3px solid #f3f3f3;
+      border-top: 3px solid #2563eb;
+      border-radius: 50%;
+      width: 24px;
+      height: 24px;
+      animation: spin 1s linear infinite;
+    }
+    @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
   </style>
 </head>
 
-<body class="bg-gradient-to-br from-slate-50 to-blue-100 min-h-screen flex items-center justify-center p-6">
+<body class="bg-gradient-to-br from-slate-100 to-blue-50 min-h-screen flex items-center justify-center p-6">
   
-  <div class="glass p-8 rounded-3xl shadow-[0_20px_50px_rgba(8,_112,_184,_0.12)] max-w-md w-full border border-white/50">
+  <div class="glass p-8 rounded-3xl shadow-[0_20px_50px_rgba(0,0,0,0.05)] max-w-md w-full border border-white">
     
     <div class="text-center mb-8">
-      <div class="inline-block p-3 bg-blue-50 rounded-2xl mb-4">
-        <span class="text-3xl">🔥</span>
+      <div class="inline-block p-3 bg-blue-600 rounded-2xl mb-4 shadow-lg shadow-blue-200">
+        <span class="text-2xl text-white">🔥</span>
       </div>
-      <h1 class="text-3xl font-extrabold text-slate-800 tracking-tight">WarnaGroup <span class="text-blue-600">Cekrek</span></h1>
-      <p class="text-slate-500 text-sm mt-1 font-medium">Cek validitas akun secara instan</p>
+      <h1 class="text-2xl font-extrabold text-slate-800 tracking-tight">WarnaGroup <span class="text-blue-600">Cekrek</span></h1>
+      <p class="text-slate-500 text-xs mt-1 font-semibold uppercase tracking-wider">Account Validation System</p>
     </div>
 
     <form id="paymentForm" class="space-y-5">
       <div>
-        <label class="block text-sm font-semibold text-slate-700 mb-1.5 ml-1">Pilih Jenis Cek:</label>
-        <select id="mode" class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-700 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none appearance-none cursor-pointer">
-          <option value="ewallet">📱 E-Wallet</option>
+        <label class="block text-[11px] uppercase font-bold text-slate-500 mb-1.5 ml-1">Jenis Layanan</label>
+        <select id="mode" class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-700 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none cursor-pointer font-medium">
           <option value="bank">🏦 Rekening Bank</option>
+          <option value="ewallet">📱 E-Wallet</option>
         </select>
       </div>
 
-      <div id="providerWrapper">
-        <label class="block text-sm font-semibold text-slate-700 mb-1.5 ml-1">Provider:</label>
-        <select id="provider" class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-700 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none cursor-pointer">
+      <div id="bankWrapper">
+        <label class="block text-[11px] uppercase font-bold text-slate-500 mb-1.5 ml-1">Pilih Bank</label>
+        <select id="bank" class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-700 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none cursor-pointer font-medium">
+          <option value="bca">BCA</option>
+          <option value="bni">BNI</option>
+          <option value="bri">BRI</option>
+          <option value="mandiri">Mandiri</option>
+          <option value="danamon">Danamon</option>
+          <option value="permata">Permata</option>
+          <option value="btn">BTN</option>
+          <option value="btpn">BTPN / Jenius</option>
+          <option value="bsi">BSI Indonesia</option>
+          <option value="cimb">CIMB Niaga</option>
+          <option value="dbs">DBS Indonesia</option>
+        </select>
+      </div>
+
+      <div id="providerWrapper" class="hidden">
+        <label class="block text-[11px] uppercase font-bold text-slate-500 mb-1.5 ml-1">Pilih E-Wallet</label>
+        <select id="provider" class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-700 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none cursor-pointer font-medium">
           <option value="shopeepay">ShopeePay</option>
           <option value="gopay">GoPay</option>
           <option value="ovo">OVO</option>
@@ -59,44 +85,26 @@
         </select>
       </div>
 
-      <div id="bankWrapper" class="hidden">
-        <label class="block text-sm font-semibold text-slate-700 mb-1.5 ml-1">Bank:</label>
-        <select id="bank" class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-700 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none cursor-pointer">
-          <option value="bank_bca">BCA</option>
-          <option value="bank_bni">BNI</option>
-          <option value="bank_bri">BRI</option>
-          <option value="bank_mandiri">Mandiri</option>
-          <option value="bank_danamon">Danamon</option>
-          <option value="bank_permata">Permata</option>
-          <option value="bank_btn">BTN</option>
-          <option value="bank_btpn">BTPN / Jenius</option>
-          <option value="bank_bsi">BSI Indonesia</option>
-          <option value="bank_digibank">Digibank</option>
-          <option value="bank_cimb_niaga">CIMB Niaga</option>
-          <option value="bank_dbs_indonesia">DBS Indonesia</option>
-        </select>
-      </div>
-
       <div>
-        <label id="idLabel" class="block text-sm font-semibold text-slate-700 mb-1.5 ml-1">Nomor HP / ID:</label>
+        <label id="idLabel" class="block text-[11px] uppercase font-bold text-slate-500 mb-1.5 ml-1">Nomor Rekening</label>
         <input id="id" type="text" autocomplete="off" 
-          class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-700 placeholder:text-slate-400 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none" 
-          placeholder="Masukkan nomor" autofocus />
+          class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 font-bold placeholder:font-normal placeholder:text-slate-400 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none" 
+          placeholder="Contoh: 12345678" autofocus />
       </div>
 
-      <button type="submit" class="group relative w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 rounded-2xl shadow-lg shadow-blue-200 active:scale-[0.98] overflow-hidden">
+      <button type="submit" class="group relative w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 rounded-2xl shadow-xl shadow-blue-100 active:scale-[0.98] overflow-hidden">
         <span class="relative z-10">Cek Sekarang</span>
       </button>
     </form>
 
-    <div id="resultBox" class="mt-8 p-5 rounded-2xl bg-slate-50 border border-dashed border-slate-200 min-h-[80px] flex items-center justify-center">
-      <p class="text-slate-400 text-sm italic">🔍 Masukkan datanya.</p>
+    <div id="resultBox" class="mt-8 p-6 rounded-2xl bg-slate-50 border border-dashed border-slate-200 min-h-[100px] flex items-center justify-center">
+      <p class="text-slate-400 text-sm font-medium">🔍 Masukkan data untuk mengecek.</p>
     </div>
   </div>
 
   <script>
-    // Anti-inspect logic
-    document.addEventListener("keydown", function (e) {
+    // Anti-Inspect & Right Click Protection
+    document.addEventListener("keydown", (e) => {
       if (e.key === "F12" || (e.ctrlKey && e.shiftKey && ["I", "J", "C"].includes(e.key)) || (e.ctrlKey && ["u", "s"].includes(e.key.toLowerCase()))) {
         e.preventDefault();
       }
@@ -110,88 +118,81 @@
     const idInput = document.getElementById("id");
     const resultBox = document.getElementById("resultBox");
 
+    // Toggle tampilan Bank vs E-Wallet
     modeSelect.addEventListener("change", () => {
       const isEwallet = modeSelect.value === "ewallet";
       providerWrapper.classList.toggle("hidden", !isEwallet);
       bankWrapper.classList.toggle("hidden", isEwallet);
-      idLabel.textContent = isEwallet ? "Nomor HP / ID:" : "Nomor Rekening:";
+      idLabel.textContent = isEwallet ? "Nomor HP / ID E-Wallet" : "Nomor Rekening Bank";
+      idInput.placeholder = isEwallet ? "Contoh: 0812xxxx" : "Contoh: 12345678";
     });
 
+    // Form Submission
     document.getElementById("paymentForm").addEventListener("submit", async (e) => {
       e.preventDefault();
+      
       const mode = modeSelect.value;
-      const id = idInput.value.trim();
+      const idValue = idInput.value.trim();
       const provider = document.getElementById("provider").value;
       const bank = document.getElementById("bank").value;
 
-      if (!id) {
-        resultBox.innerHTML = `<p class="text-amber-600 font-medium">🔍 Masukkan datanya dulu ya.</p>`;
+      if (!idValue) {
+        resultBox.innerHTML = `<p class="text-amber-600 font-bold animate-result">⚠️ Mohon isi nomor/ID dulu.</p>`;
         return;
       }
 
+      // Animasi Loading
       resultBox.innerHTML = `
-        <div class="flex flex-col items-center gap-2">
-          <div class="w-6 h-6 border-4 border-blue-600/20 border-t-blue-600 rounded-full animate-spin"></div>
-          <p class="text-blue-500 text-sm font-medium">⏳ Sedang memproses...</p>
+        <div class="flex flex-col items-center gap-3">
+          <div class="loader"></div>
+          <p class="text-blue-600 text-[10px] font-black uppercase tracking-[0.2em]">SINKRONISASI DATA...</p>
         </div>`;
 
-      let query = `?mode=${mode}`;
+      // Buat query string untuk memanggil /api/inquiry.js
+      let query = `/api/inquiry?mode=${mode}`;
       if (mode === "ewallet") {
-        query += `&id=${encodeURIComponent(id)}&provider=${encodeURIComponent(provider)}`;
+        query += `&id=${encodeURIComponent(idValue)}&provider=${encodeURIComponent(provider)}`;
       } else {
-        query += `&bank=${encodeURIComponent(bank)}&rekening=${encodeURIComponent(id)}`;
+        query += `&bank=${encodeURIComponent(bank)}&rekening=${encodeURIComponent(idValue)}`;
       }
 
       try {
-        const res = await fetch(`/api/inquiry${query}`);
-        const data = await res.json();
+        const res = await fetch(query);
+        const json = await res.json();
 
-        if (!res.ok || !data || data.error) {
-          resultBox.innerHTML = `<div class="text-red-600 text-center font-medium">❌ ${data?.error || "Gagal cek data."}</div>`;
+        if (!res.ok || json.error) {
+          resultBox.innerHTML = `
+            <div class="text-center animate-result">
+              <p class="text-red-500 font-bold">❌ Gagal</p>
+              <p class="text-slate-400 text-[10px] mt-1 uppercase font-bold">${json.error || "Data tidak ditemukan"}</p>
+            </div>`;
           return;
         }
 
-        let innerContent = "";
-        if (mode === "ewallet" && data.data?.status === "SUCCESS") {
-          innerContent = `
-            <div class="w-full space-y-2 animate-result">
-              <div class="flex justify-between border-b border-slate-100 pb-2">
-                <span class="text-[10px] uppercase font-bold text-slate-400">Nama</span>
-                <span class="text-slate-800 font-bold">${data.data.name}</span>
+        // Tampilkan Hasil Sukses
+        resultBox.innerHTML = `
+          <div class="w-full space-y-4 animate-result">
+            <div class="bg-blue-600 p-3 rounded-xl text-white text-center shadow-lg shadow-blue-100">
+              <p class="text-[10px] uppercase font-black opacity-80 mb-1">Nama Pemilik Akun</p>
+              <p class="text-lg font-bold leading-tight">${json.data.nama}</p>
+            </div>
+            <div class="grid grid-cols-2 gap-2 text-[11px] font-bold uppercase">
+              <div class="bg-white p-2 rounded-lg border border-slate-100">
+                <p class="text-slate-400 mb-1">Nomor</p>
+                <p class="text-slate-700 font-mono">${json.data.no_rekening}</p>
               </div>
-              <div class="flex justify-between border-b border-slate-100 pb-2">
-                <span class="text-[10px] uppercase font-bold text-slate-400">ID</span>
-                <span class="text-slate-600">${data.data.account_number}</span>
+              <div class="bg-white p-2 rounded-lg border border-slate-100">
+                <p class="text-slate-400 mb-1">Layanan</p>
+                <p class="text-blue-600">${json.data.nama_bank}</p>
               </div>
-              <div class="flex justify-between">
-                <span class="text-[10px] uppercase font-bold text-slate-400">Wallet</span>
-                <span class="text-blue-600 font-bold text-xs uppercase">${data.data.bank}</span>
-              </div>
-            </div>`;
-        } else if (mode === "bank" && data.success && data.data?.nama) {
-          innerContent = `
-            <div class="w-full space-y-2 animate-result">
-              <div class="flex justify-between border-b border-slate-100 pb-2">
-                <span class="text-[10px] uppercase font-bold text-slate-400">Nama</span>
-                <span class="text-slate-800 font-bold">${data.data.nama}</span>
-              </div>
-              <div class="flex justify-between border-b border-slate-100 pb-2">
-                <span class="text-[10px] uppercase font-bold text-slate-400">Rekening</span>
-                <span class="text-slate-600">${data.data.no_rekening}</span>
-              </div>
-              <div class="flex justify-between">
-                <span class="text-[10px] uppercase font-bold text-slate-400">Bank</span>
-                <span class="text-blue-600 font-bold text-xs uppercase">${data.data.nama_bank}</span>
-              </div>
-            </div>`;
-        } else {
-          innerContent = `<div class="text-red-600 text-center">❌ Tidak ditemukan atau tidak valid.</div>`;
-        }
-        
-        resultBox.innerHTML = innerContent;
+            </div>
+            <div class="bg-green-50 text-green-600 p-2 rounded-lg text-center text-[10px] font-black border border-green-100 tracking-widest uppercase">
+              Valid & Terverifikasi ✅
+            </div>
+          </div>`;
 
       } catch (err) {
-        resultBox.innerHTML = `<div class="text-red-600 text-center">❌ Gagal memproses. Coba lagi nanti.</div>`;
+        resultBox.innerHTML = `<p class="text-red-500 font-bold animate-result text-xs text-center">❌ Gagal menghubungi server.</p>`;
       }
     });
   </script>
