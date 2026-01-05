@@ -3,34 +3,54 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>🔥 WarnaGroup Cekrek</title>
+  <title>WarnaGroup Cekrek — Modern Inquiry</title>
   <link rel="icon" type="image/png" href="https://images.icon-icons.com/2746/PNG/512/rainbow_icon_175988.png">
   <script src="https://cdn.tailwindcss.com"></script>
-    <style>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+  
+  <style>
+    body { font-family: 'Plus Jakarta Sans', sans-serif; }
     * {
       user-select: none;
       -webkit-user-select: none;
-      -moz-user-select: none;
-      -ms-user-select: none;
+      transition: all 0.2s ease-in-out;
     }
+    .glass {
+      background: rgba(255, 255, 255, 0.98);
+      backdrop-filter: blur(10px);
+    }
+    @keyframes slideUp {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    .animate-result { animation: slideUp 0.4s ease-out forwards; }
   </style>
 </head>
-<body class="bg-gray-100 min-h-screen flex items-center justify-center p-4">
-  <div class="bg-white p-8 rounded-xl shadow-lg max-w-md w-full">
-    <h1 class="text-2xl font-bold text-blue-600 mb-4 text-center">🔥 WarnaGroup Cekrek</h1>
 
-    <form id="paymentForm" class="space-y-4">
+<body class="bg-gradient-to-br from-slate-50 to-blue-100 min-h-screen flex items-center justify-center p-6">
+  
+  <div class="glass p-8 rounded-3xl shadow-[0_20px_50px_rgba(8,_112,_184,_0.12)] max-w-md w-full border border-white/50">
+    
+    <div class="text-center mb-8">
+      <div class="inline-block p-3 bg-blue-50 rounded-2xl mb-4">
+        <span class="text-3xl">🔥</span>
+      </div>
+      <h1 class="text-3xl font-extrabold text-slate-800 tracking-tight">WarnaGroup <span class="text-blue-600">Cekrek</span></h1>
+      <p class="text-slate-500 text-sm mt-1 font-medium">Cek validitas akun secara instan</p>
+    </div>
+
+    <form id="paymentForm" class="space-y-5">
       <div>
-        <label for="mode" class="block font-medium">Pilih Jenis Cek:</label>
-        <select id="mode" class="w-full p-2 border rounded">
-          <option value="ewallet">E-Wallet</option>
-          <option value="bank">Rekening Bank</option>
+        <label class="block text-sm font-semibold text-slate-700 mb-1.5 ml-1">Pilih Jenis Cek:</label>
+        <select id="mode" class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-700 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none appearance-none cursor-pointer">
+          <option value="ewallet">📱 E-Wallet</option>
+          <option value="bank">🏦 Rekening Bank</option>
         </select>
       </div>
 
       <div id="providerWrapper">
-        <label for="provider" class="block font-medium">Provider:</label>
-        <select id="provider" class="w-full p-2 border rounded">
+        <label class="block text-sm font-semibold text-slate-700 mb-1.5 ml-1">Provider:</label>
+        <select id="provider" class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-700 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none cursor-pointer">
           <option value="shopeepay">ShopeePay</option>
           <option value="gopay">GoPay</option>
           <option value="ovo">OVO</option>
@@ -40,8 +60,8 @@
       </div>
 
       <div id="bankWrapper" class="hidden">
-        <label for="bank" class="block font-medium">Bank:</label>
-        <select id="bank" class="w-full p-2 border rounded">
+        <label class="block text-sm font-semibold text-slate-700 mb-1.5 ml-1">Bank:</label>
+        <select id="bank" class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-700 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none cursor-pointer">
           <option value="bank_bca">BCA</option>
           <option value="bank_bni">BNI</option>
           <option value="bank_bri">BRI</option>
@@ -58,35 +78,36 @@
       </div>
 
       <div>
-        <label for="id" id="idLabel" class="block font-medium">Nomor HP / ID:</label>
-      <input id="id" type="text" autocomplete="off" class="w-full p-2 border rounded" placeholder="Masukkan nomor" autofocus />
+        <label id="idLabel" class="block text-sm font-semibold text-slate-700 mb-1.5 ml-1">Nomor HP / ID:</label>
+        <input id="id" type="text" autocomplete="off" 
+          class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-700 placeholder:text-slate-400 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none" 
+          placeholder="Masukkan nomor" autofocus />
       </div>
 
-      <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white w-full py-2 rounded">
-        Cek Sekarang
+      <button type="submit" class="group relative w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 rounded-2xl shadow-lg shadow-blue-200 active:scale-[0.98] overflow-hidden">
+        <span class="relative z-10">Cek Sekarang</span>
       </button>
     </form>
 
-        <div id="resultBox" class="mt-6 p-4 rounded bg-gray-100 text-sm text-gray-800 text-center break-words">
-      🔍 Masukkan datanya.
+    <div id="resultBox" class="mt-8 p-5 rounded-2xl bg-slate-50 border border-dashed border-slate-200 min-h-[80px] flex items-center justify-center">
+      <p class="text-slate-400 text-sm italic">🔍 Masukkan datanya.</p>
     </div>
   </div>
 
-    <script>
+  <script>
+    // Anti-inspect logic
     document.addEventListener("keydown", function (e) {
       if (e.key === "F12" || (e.ctrlKey && e.shiftKey && ["I", "J", "C"].includes(e.key)) || (e.ctrlKey && ["u", "s"].includes(e.key.toLowerCase()))) {
         e.preventDefault();
       }
     });
-
     document.addEventListener('contextmenu', e => e.preventDefault());
-  </script>
 
-  <script>
     const modeSelect = document.getElementById("mode");
     const providerWrapper = document.getElementById("providerWrapper");
     const bankWrapper = document.getElementById("bankWrapper");
     const idLabel = document.getElementById("idLabel");
+    const idInput = document.getElementById("id");
     const resultBox = document.getElementById("resultBox");
 
     modeSelect.addEventListener("change", () => {
@@ -98,24 +119,21 @@
 
     document.getElementById("paymentForm").addEventListener("submit", async (e) => {
       e.preventDefault();
-
       const mode = modeSelect.value;
-      const id = document.getElementById("id").value.trim();
+      const id = idInput.value.trim();
       const provider = document.getElementById("provider").value;
       const bank = document.getElementById("bank").value;
 
       if (!id) {
-        resultBox.innerHTML = `<div class="text-center">🔍 Masukkan datanya dulu ya.</div>`;
+        resultBox.innerHTML = `<p class="text-amber-600 font-medium">🔍 Masukkan datanya dulu ya.</p>`;
         return;
       }
 
       resultBox.innerHTML = `
-      <div class="flex flex-col items-center justify-center gap-2 my-4">
-      <div class="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-blue-500"></div>
-       <p class="text-blue-500 text-sm">⏳ Sedang memproses...</p>
-       </div>
-       `;
-
+        <div class="flex flex-col items-center gap-2">
+          <div class="w-6 h-6 border-4 border-blue-600/20 border-t-blue-600 rounded-full animate-spin"></div>
+          <p class="text-blue-500 text-sm font-medium">⏳ Sedang memproses...</p>
+        </div>`;
 
       let query = `?mode=${mode}`;
       if (mode === "ewallet") {
@@ -129,32 +147,50 @@
         const data = await res.json();
 
         if (!res.ok || !data || data.error) {
-          resultBox.innerHTML = `<div class="text-red-600 text-center">❌ ${data?.error || "Gagal cek data."}</div>`;
+          resultBox.innerHTML = `<div class="text-red-600 text-center font-medium">❌ ${data?.error || "Gagal cek data."}</div>`;
           return;
         }
 
+        let innerContent = "";
         if (mode === "ewallet" && data.data?.status === "SUCCESS") {
-          resultBox.innerHTML = `
-            <div class="text-left text-sm">
-              ✅ <strong>Nama:</strong> ${data.data.name}<br />
-              🔢 <strong>ID:</strong> ${data.data.account_number}<br />
-              💼 <strong>Wallet:</strong> ${data.data.bank}
-            </div>
-          `;
-            } else if (mode === "bank" && data.success && data.data?.nama) {
-          resultBox.innerHTML = `
-            <div class="text-left text-sm">
-              ✅ <strong>Nama:</strong> ${data.data.nama}<br />
-              🔢 <strong>Rekening:</strong> ${data.data.no_rekening}<br />
-              🏦 <strong>Bank:</strong> ${data.data.nama_bank}
-            </div>
-          `;
+          innerContent = `
+            <div class="w-full space-y-2 animate-result">
+              <div class="flex justify-between border-b border-slate-100 pb-2">
+                <span class="text-[10px] uppercase font-bold text-slate-400">Nama</span>
+                <span class="text-slate-800 font-bold">${data.data.name}</span>
+              </div>
+              <div class="flex justify-between border-b border-slate-100 pb-2">
+                <span class="text-[10px] uppercase font-bold text-slate-400">ID</span>
+                <span class="text-slate-600">${data.data.account_number}</span>
+              </div>
+              <div class="flex justify-between">
+                <span class="text-[10px] uppercase font-bold text-slate-400">Wallet</span>
+                <span class="text-blue-600 font-bold text-xs uppercase">${data.data.bank}</span>
+              </div>
+            </div>`;
+        } else if (mode === "bank" && data.success && data.data?.nama) {
+          innerContent = `
+            <div class="w-full space-y-2 animate-result">
+              <div class="flex justify-between border-b border-slate-100 pb-2">
+                <span class="text-[10px] uppercase font-bold text-slate-400">Nama</span>
+                <span class="text-slate-800 font-bold">${data.data.nama}</span>
+              </div>
+              <div class="flex justify-between border-b border-slate-100 pb-2">
+                <span class="text-[10px] uppercase font-bold text-slate-400">Rekening</span>
+                <span class="text-slate-600">${data.data.no_rekening}</span>
+              </div>
+              <div class="flex justify-between">
+                <span class="text-[10px] uppercase font-bold text-slate-400">Bank</span>
+                <span class="text-blue-600 font-bold text-xs uppercase">${data.data.nama_bank}</span>
+              </div>
+            </div>`;
         } else {
-          resultBox.innerHTML = `<div class="text-red-600 text-center">❌ Tidak ditemukan atau tidak valid.</div>`;
+          innerContent = `<div class="text-red-600 text-center">❌ Tidak ditemukan atau tidak valid.</div>`;
         }
+        
+        resultBox.innerHTML = innerContent;
 
       } catch (err) {
-        console.error(err);
         resultBox.innerHTML = `<div class="text-red-600 text-center">❌ Gagal memproses. Coba lagi nanti.</div>`;
       }
     });
