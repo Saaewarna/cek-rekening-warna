@@ -1,4 +1,43 @@
 export default async function handler(req, res) {
+  // ==========================================
+  // 🛡️ BAGIAN 1: KEAMANAN (IP WHITELIST)
+  // ==========================================
+  
+  // DAFTAR IP YANG DIBOLEHKAN AKSES (Ganti/Tambah di sini)
+  // Masukkan IP Server kamu, IP VPN, atau IP statis kantor.
+  const ALLOWED_IPS = [
+    '127.0.0.1',      // Wajib: Localhost (biar jalan saat dev di laptop)
+    '::1',            // Wajib: Localhost IPv6
+    '116.212.153.62',   // IP LANTAI 9 BARIS HIJAU
+    '45.201.166.118'    // IP LANTAI 9 BARIS BIRU
+    '38.47.38.176'    // IP LANTAI 8 BARIS MERONA
+    '45.201.166.118'    // IP LANTAI 8 BARIS UNGU
+  ];
+
+  // Mendapatkan IP asli pengunjung (support Vercel/Cloudflare)
+  let clientIp = req.headers['x-forwarded-for'] || req.socket.remoteAddress;
+
+  // Jika ada banyak IP (karena proxy), ambil yang paling depan (IP asli)
+  if (clientIp && clientIp.indexOf(',') > -1) {
+    clientIp = clientIp.split(',')[0].trim();
+  }
+
+  // Cek apakah IP ada di daftar putih
+  if (!ALLOWED_IPS.includes(clientIp)) {
+    console.warn(`[BLOCKED] Percobaan akses ilegal dari IP: ${clientIp}`);
+    
+    // Langsung tolak request. JANGAN panggil RapidAPI.
+    return res.status(403).json({
+      success: false,
+      error: 'AKSES DITOLAK: IP Anda tidak terdaftar.',
+      your_ip: clientIp // Saya tampilkan ini biar kamu gampang copy IP-nya kalau mau di-whitelist
+    });
+  }
+
+  // ==========================================
+  // 🚀 BAGIAN 2: LOGIKA UTAMA (Hanya jalan jika IP aman)
+  // ==========================================
+
   const { mode, id, provider, bank, rekening } = req.query;
 
   // 1. Validasi Input Dasar
@@ -57,31 +96,21 @@ export default async function handler(req, res) {
 
   // 3. Eksekusi Request ke API
   try {
-    // [DEBUGGING] Cek apakah ENV terbaca di Vercel Logs
-    console.log('[DEBUG] API Key exist?', process.env.RAPIDAPI_KEY ? 'YES' : 'NO');
-    console.log('[DEBUG] Host:', headers['x-rapidapi-host']);
-    console.log('[DEBUG] Final URL:', url);
-
     const response = await fetch(url, { method: 'GET', headers });
     const data = await response.json();
 
-    // [HANDLE LOGIC ERROR] Cek jika API merespon 200 OK tapi isinya error (misal: unauthorized)
+    // [HANDLE LOGIC ERROR] Cek jika API merespon 200 OK tapi isinya error
     if (data.success === false) {
-      console.error('[API REJECT]', data);
-      // Mengembalikan pesan error dari API aslinya ke frontend
       return res.status(400).json({ 
-        error: data.data || 'Gagal validasi. Cek Subscription RapidAPI atau Saldo.' 
+        error: data.data || 'Gagal validasi. Cek data input.' 
       });
     }
 
-    // [HANDLE HTTP ERROR] Cek jika status HTTP bukan 200 (misal 404/500)
+    // [HANDLE HTTP ERROR]
     if (!response.ok) {
       const errorMessage = data?.message || data?.error || 'Gagal ambil data dari API';
-      console.error('[API HTTP ERROR]', response.status, errorMessage);
       return res.status(response.status).json({ error: errorMessage });
     }
-
-    console.log(`[INQUIRY SUCCESS] mode: ${mode}, provider: ${provider}, id: ${id}`);
 
     // Berhasil
     res.status(200).json(data);
