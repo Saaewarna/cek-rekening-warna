@@ -6,7 +6,11 @@ export default async function handler(req, res) {
     '127.0.0.1',
     '::1',
     // Masukkan IP Publik kamu di bawah (Cek Logs Vercel kalau error)
-    '38.47.38.176', 
+    '38.47.38.176', // IP LANTAI 8 BARISAN MERONA
+    '45.201.166.118', // IP LANTAI 9 BARISAN BIRU
+    '116.212.153.62', // IP LANTAI 9 BARISAN HIJAU
+    '38.47.38.176', // IP LANTAI 9 BARISAN EMAS
+    '96.9.95.126', // IP LANTAI 9 BARISAN UNGU
   ];
 
   try {
@@ -113,4 +117,5 @@ export default async function handler(req, res) {
     return res.status(500).json({ error: `Internal Error: ${err.message}` });
   }
 }
+
 
