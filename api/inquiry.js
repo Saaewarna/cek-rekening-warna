@@ -6,7 +6,7 @@ export default async function handler(req, res) {
     '127.0.0.1',
     '::1',
     // Masukkan IP Publik kamu di bawah (Cek Logs Vercel kalau error)
-    '114.125.0.0', 
+    '38.47.38.176', 
   ];
 
   try {
@@ -113,3 +113,4 @@ export default async function handler(req, res) {
     return res.status(500).json({ error: `Internal Error: ${err.message}` });
   }
 }
+
