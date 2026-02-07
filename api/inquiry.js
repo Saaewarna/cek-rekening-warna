@@ -25,7 +25,7 @@ export default async function handler(req, res) {
     if (!ALLOWED_IPS.includes(clientIp)) {
       return res.status(403).json({
         success: false,
-        error: `AKSES DITOLAK IP KAMU (${clientIp}) BELUM DI WL, JAPRI YA BIAR DI WL IP NYA.`,
+        error: `Akses ditolak, IP kamu (${clientIp}) belum di Whitelist.`,
         your_ip: clientIp
       });
     }
@@ -117,6 +117,7 @@ export default async function handler(req, res) {
     return res.status(500).json({ error: `Internal Error: ${err.message}` });
   }
 }
+
 
 
 
