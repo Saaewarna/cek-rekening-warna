@@ -1,117 +1,115 @@
-// Coba import fetch manual buat jaga-jaga kalau Node.js versi lama
-// Kalau error biarin aja, kita fallback nanti
-let nodeFetch;
-try { nodeFetch = await import('node-fetch').then(m => m.default); } catch (e) {}
-
 export default async function handler(req, res) {
+  // ==========================================
+  // 1. CONFIG: IP WHITELIST & API KEY
+  // ==========================================
+  const ALLOWED_IPS = [
+    '127.0.0.1',
+    '::1',
+    // Masukkan IP Publik kamu di bawah (Cek Logs Vercel kalau error)
+    '114.125.0.0', 
+  ];
+
   try {
-    // ==========================================
-    // 🛡️ BAGIAN 1: KEAMANAN (IP WHITELIST)
-    // ==========================================
-    
-    // GANTI IP DI SINI DENGAN IP KAMU YANG MUNCUL DI LOG VERCEL NANTI
-    const ALLOWED_IPS = [
-      '127.0.0.1', 
-      '::1',
-      // Masukkan IP Publik kamu di bawah ini (Copy dari Log Vercel kalau muncul)
-      '114.125.0.0', // Contoh (Ganti dengan IP aslimu)
-    ];
-
-    // Ambil IP dengan cara aman (pakai ?. biar gak crash kalau null)
+    // ----------------------------------------
+    // CEK IP (SECURITY)
+    // ----------------------------------------
     let clientIp = req.headers['x-forwarded-for'] || req.socket?.remoteAddress || '';
+    if (clientIp.includes(',')) clientIp = clientIp.split(',')[0].trim();
 
-    // Bersihkan format IP (ambil yang paling depan kalau ada koma)
-    if (clientIp && clientIp.indexOf(',') > -1) {
-      clientIp = clientIp.split(',')[0].trim();
-    }
+    console.log(`[DEBUG] Request masuk dari IP: ${clientIp}`);
 
-    console.log(`[DEBUG] Incoming Request from IP: ${clientIp}`);
-
-    // Cek Whitelist
-    // Kita cek apakah IP user ada di dalam daftar ALLOWED_IPS
-    const isAllowed = ALLOWED_IPS.includes(clientIp);
-
-    if (!isAllowed) {
-      console.warn(`[BLOCKED] IP ${clientIp} tidak terdaftar.`);
+    if (!ALLOWED_IPS.includes(clientIp)) {
       return res.status(403).json({
-        success: false, 
-        error: `AKSES DITOLAK. IP Kamu (${clientIp}) belum terdaftar di script.`,
-        your_ip: clientIp 
+        success: false,
+        error: `AKSES DITOLAK. IP Kamu (${clientIp}) tidak terdaftar.`,
+        your_ip: clientIp
       });
     }
 
-    // ==========================================
-    // 🚀 BAGIAN 2: LOGIKA UTAMA
-    // ==========================================
-    
-    const { mode, id, provider, bank, rekening } = req.query;
-
+    // ----------------------------------------
+    // CEK API KEY (Mencegah Error 500 krn Key hilang)
+    // ----------------------------------------
     if (!process.env.RAPIDAPI_KEY) {
-      throw new Error("RAPIDAPI_KEY belum disetting di Vercel Environment Variables!");
+      console.error('[CRITICAL] RAPIDAPI_KEY belum disetting di Vercel!');
+      return res.status(500).json({ error: 'Server Config Error: API Key belum dipasang di Vercel.' });
     }
 
-    let url = '';
+    // ==========================================
+    // 2. PROSES REQUEST
+    // ==========================================
+    const { mode, id, provider, bank, rekening } = req.query;
+    
+    // Siapkan Header
     const headers = {
       'x-rapidapi-key': process.env.RAPIDAPI_KEY,
-      'x-rapidapi-host': ''
+      'Content-Type': 'application/json'
     };
 
-    // Mode E-WALLET
+    let url = '';
+    
     if (mode === 'ewallet') {
-      if (!id || !provider) return res.status(400).json({ error: 'Data e-wallet kurang lengkap.' });
+      if (!id || !provider) throw new Error('Data e-wallet tidak lengkap.');
       
+      const p = provider.toLowerCase().trim();
       const host = process.env.RAPIDAPI_HOST || 'cek-e-wallet.p.rapidapi.com'; 
       headers['x-rapidapi-host'] = host;
       
-      const p = provider.toLowerCase();
-      url = p === 'linkaja'
-        ? `https://${host}/cekewallet/${id}/LINKAJA`
-        : `https://${host}/cek_ewallet/${id}/${p}`;
-    
-    // Mode BANK
+      // EncodeURIComponent penting biar ID yang aneh-aneh gak bikin error
+      url = (p === 'linkaja')
+        ? `https://${host}/cekewallet/${encodeURIComponent(id)}/LINKAJA`
+        : `https://${host}/cek_ewallet/${encodeURIComponent(id)}/${encodeURIComponent(p)}`;
+
     } else if (mode === 'bank') {
-      if (!bank || !rekening) return res.status(400).json({ error: 'Data bank kurang lengkap.' });
-      
-      const host = "cek-nomor-rekening-bank.p.rapidapi.com";
+      if (!bank || !rekening) throw new Error('Data bank tidak lengkap.');
+
+      const host = 'cek-nomor-rekening-bank.p.rapidapi.com';
       headers['x-rapidapi-host'] = host;
       
-      // Sanitasi nama bank biar sesuai format API
-      // Pastikan value di frontend (HTML) sama persis dengan yang diharapkan API
-      url = `https://${host}/check_bank_lq/${bank}/${rekening}`;
-      
+      // [FIX ERROR 500] Gunakan encodeURIComponent untuk menangani spasi (misal "bank bca")
+      url = `https://${host}/check_bank_lq/${encodeURIComponent(bank)}/${encodeURIComponent(rekening)}`;
+
     } else {
-      return res.status(400).json({ error: 'Mode tidak dikenali.' });
+      return res.status(400).json({ error: 'Mode tidak valid.' });
     }
 
-    // Eksekusi Fetch (Support Node lama & baru)
-    const fetchFunc = global.fetch || nodeFetch;
-    if (!fetchFunc) {
-      throw new Error("Fetch tidak ditemukan. Silakan upgrade Node.js di Vercel ke versi 18+");
-    }
+    // ----------------------------------------
+    // EKSEKUSI FETCH
+    // ----------------------------------------
+    // Timeout 10 detik biar gak loading selamanya
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 10000);
 
-    const apiRes = await fetchFunc(url, { method: 'GET', headers });
-    
-    // Cek response API apakah JSON valid
-    const text = await apiRes.text();
-    let data;
     try {
-      data = JSON.parse(text);
-    } catch (err) {
-      console.error("API Response bukan JSON:", text);
-      return res.status(502).json({ error: "Terjadi kesalahan pada Provider API (Bad Gateway)." });
+      console.log(`[DEBUG] Fetching URL: ${url}`); // Cek URL di Logs kalau error
+      const apiReq = await fetch(url, { headers, signal: controller.signal });
+      clearTimeout(timeout);
+
+      // Cek apakah response berupa JSON
+      const contentType = apiReq.headers.get("content-type");
+      if (!contentType || !contentType.includes("application/json")) {
+        const text = await apiReq.text();
+        console.error("[API ERROR] Response bukan JSON:", text);
+        return res.status(502).json({ error: "Terjadi gangguan pada Provider API (Bad Gateway)." });
+      }
+
+      const data = await apiReq.json();
+
+      if (!apiReq.ok) {
+        return res.status(apiReq.status).json({ 
+          error: data.message || data.error || 'Gagal validasi dari pusat.' 
+        });
+      }
+
+      return res.status(200).json(data);
+
+    } catch (fetchError) {
+      clearTimeout(timeout);
+      console.error('[FETCH ERROR]', fetchError);
+      return res.status(502).json({ error: 'Koneksi ke server pusat timeout/gagal.' });
     }
 
-    if (!apiRes.ok) {
-      return res.status(apiRes.status).json({ error: data.message || data.error || 'Gagal dari pusat.' });
-    }
-
-    return res.status(200).json(data);
-
-  } catch (error) {
-    console.error('[CRITICAL ERROR]', error);
-    return res.status(500).json({ 
-      error: `Server Error: ${error.message}`,
-      hint: "Cek Logs Vercel untuk detail."
-    });
+  } catch (err) {
+    console.error('[SERVER ERROR]', err);
+    return res.status(500).json({ error: `Internal Error: ${err.message}` });
   }
 }
