@@ -1,122 +1,117 @@
+// Coba import fetch manual buat jaga-jaga kalau Node.js versi lama
+// Kalau error biarin aja, kita fallback nanti
+let nodeFetch;
+try { nodeFetch = await import('node-fetch').then(m => m.default); } catch (e) {}
+
 export default async function handler(req, res) {
-  // ==========================================
-  // 🛡️ BAGIAN 1: KEAMANAN (IP WHITELIST)
-  // ==========================================
-  
-  // DAFTAR IP YANG DIBOLEHKAN AKSES (Ganti/Tambah di sini)
-  // Masukkan IP Server kamu, IP VPN, atau IP statis kantor.
-  const ALLOWED_IPS = [
-    '127.0.0.1',      // Wajib: Localhost (biar jalan saat dev di laptop)
-    '::1',            // Wajib: Localhost IPv6
-    '116.212.153.62',   // IP LANTAI 9 BARIS HIJAU
-    '45.201.166.118'    // IP LANTAI 9 BARIS BIRU
-    '38.47.38.176'    // IP LANTAI 8 BARIS MERONA
-    '45.201.166.118'    // IP LANTAI 8 BARIS UNGU
-  ];
-
-  // Mendapatkan IP asli pengunjung (support Vercel/Cloudflare)
-  let clientIp = req.headers['x-forwarded-for'] || req.socket.remoteAddress;
-
-  // Jika ada banyak IP (karena proxy), ambil yang paling depan (IP asli)
-  if (clientIp && clientIp.indexOf(',') > -1) {
-    clientIp = clientIp.split(',')[0].trim();
-  }
-
-  // Cek apakah IP ada di daftar putih
-  if (!ALLOWED_IPS.includes(clientIp)) {
-    console.warn(`[BLOCKED] Percobaan akses ilegal dari IP: ${clientIp}`);
+  try {
+    // ==========================================
+    // 🛡️ BAGIAN 1: KEAMANAN (IP WHITELIST)
+    // ==========================================
     
-    // Langsung tolak request. JANGAN panggil RapidAPI.
-    return res.status(403).json({
-      success: false,
-      error: 'AKSES DITOLAK: IP Anda tidak terdaftar.',
-      your_ip: clientIp // Saya tampilkan ini biar kamu gampang copy IP-nya kalau mau di-whitelist
-    });
-  }
-
-  // ==========================================
-  // 🚀 BAGIAN 2: LOGIKA UTAMA (Hanya jalan jika IP aman)
-  // ==========================================
-
-  const { mode, id, provider, bank, rekening } = req.query;
-
-  // 1. Validasi Input Dasar
-  if (!mode) {
-    return res.status(400).json({ error: 'Parameter mode wajib diisi (ewallet/bank).' });
-  }
-
-  const sanitizedId = id?.trim();
-  const sanitizedProvider = provider?.trim();
-  const sanitizedBank = bank?.trim();
-  const sanitizedRekening = rekening?.trim();
-
-  let url = '';
-  // Pastikan RAPIDAPI_KEY sudah ada di Environment Variables Vercel
-  const headers = {
-    'x-rapidapi-key': process.env.RAPIDAPI_KEY,
-  };
-
-  // 2. Tentukan URL dan Header berdasarkan Mode
-  if (mode === 'ewallet') {
-    if (!sanitizedId || !sanitizedProvider) {
-      return res.status(400).json({ error: 'Parameter id dan provider wajib diisi untuk e-wallet.' });
-    }
-
-    // Logic khusus LinkAja vs E-wallet lain
-    url = sanitizedProvider.toLowerCase() === 'linkaja'
-      ? `https://${process.env.RAPIDAPI_HOST}/cekewallet/${sanitizedId}/LINKAJA`
-      : `https://${process.env.RAPIDAPI_HOST}/cek_ewallet/${sanitizedId}/${sanitizedProvider.toLowerCase()}`;
-
-    headers['x-rapidapi-host'] = process.env.RAPIDAPI_HOST;
-
-  } else if (mode === 'bank') {
-    if (!sanitizedBank || !sanitizedRekening) {
-      return res.status(400).json({ error: 'Parameter bank dan rekening wajib diisi untuk cek rekening.' });
-    }
-
-    // Gunakan API Host khusus Bank
-    const selectedHost = "cek-nomor-rekening-bank.p.rapidapi.com";
-    const supportedBanks = [
-      'bank_bca', 'bank_bni', 'bank_bri', 'bank_mandiri', 'bank_btn',
-      'bank_danamon', 'bank_btpn', 'bank_bsi', 'bank_digibank',
-      'bank_permata', 'bank_cimb_niaga', 'bank_dbs_indonesia'
+    // GANTI IP DI SINI DENGAN IP KAMU YANG MUNCUL DI LOG VERCEL NANTI
+    const ALLOWED_IPS = [
+      '127.0.0.1', 
+      '::1',
+      // Masukkan IP Publik kamu di bawah ini (Copy dari Log Vercel kalau muncul)
+      '114.125.0.0', // Contoh (Ganti dengan IP aslimu)
     ];
 
-    if (!supportedBanks.includes(sanitizedBank)) {
-      return res.status(400).json({ error: 'Bank tidak didukung.' });
+    // Ambil IP dengan cara aman (pakai ?. biar gak crash kalau null)
+    let clientIp = req.headers['x-forwarded-for'] || req.socket?.remoteAddress || '';
+
+    // Bersihkan format IP (ambil yang paling depan kalau ada koma)
+    if (clientIp && clientIp.indexOf(',') > -1) {
+      clientIp = clientIp.split(',')[0].trim();
     }
 
-    const path = `check_bank_lq/${sanitizedBank}`;
-    url = `https://${selectedHost}/${path}/${sanitizedRekening}`;
-    headers['x-rapidapi-host'] = selectedHost;
+    console.log(`[DEBUG] Incoming Request from IP: ${clientIp}`);
 
-  } else {
-    return res.status(400).json({ error: 'Mode tidak valid. Gunakan "ewallet" atau "bank".' });
-  }
+    // Cek Whitelist
+    // Kita cek apakah IP user ada di dalam daftar ALLOWED_IPS
+    const isAllowed = ALLOWED_IPS.includes(clientIp);
 
-  // 3. Eksekusi Request ke API
-  try {
-    const response = await fetch(url, { method: 'GET', headers });
-    const data = await response.json();
-
-    // [HANDLE LOGIC ERROR] Cek jika API merespon 200 OK tapi isinya error
-    if (data.success === false) {
-      return res.status(400).json({ 
-        error: data.data || 'Gagal validasi. Cek data input.' 
+    if (!isAllowed) {
+      console.warn(`[BLOCKED] IP ${clientIp} tidak terdaftar.`);
+      return res.status(403).json({
+        success: false, 
+        error: `AKSES DITOLAK. IP Kamu (${clientIp}) belum terdaftar di script.`,
+        your_ip: clientIp 
       });
     }
 
-    // [HANDLE HTTP ERROR]
-    if (!response.ok) {
-      const errorMessage = data?.message || data?.error || 'Gagal ambil data dari API';
-      return res.status(response.status).json({ error: errorMessage });
+    // ==========================================
+    // 🚀 BAGIAN 2: LOGIKA UTAMA
+    // ==========================================
+    
+    const { mode, id, provider, bank, rekening } = req.query;
+
+    if (!process.env.RAPIDAPI_KEY) {
+      throw new Error("RAPIDAPI_KEY belum disetting di Vercel Environment Variables!");
     }
 
-    // Berhasil
-    res.status(200).json(data);
+    let url = '';
+    const headers = {
+      'x-rapidapi-key': process.env.RAPIDAPI_KEY,
+      'x-rapidapi-host': ''
+    };
+
+    // Mode E-WALLET
+    if (mode === 'ewallet') {
+      if (!id || !provider) return res.status(400).json({ error: 'Data e-wallet kurang lengkap.' });
+      
+      const host = process.env.RAPIDAPI_HOST || 'cek-e-wallet.p.rapidapi.com'; 
+      headers['x-rapidapi-host'] = host;
+      
+      const p = provider.toLowerCase();
+      url = p === 'linkaja'
+        ? `https://${host}/cekewallet/${id}/LINKAJA`
+        : `https://${host}/cek_ewallet/${id}/${p}`;
+    
+    // Mode BANK
+    } else if (mode === 'bank') {
+      if (!bank || !rekening) return res.status(400).json({ error: 'Data bank kurang lengkap.' });
+      
+      const host = "cek-nomor-rekening-bank.p.rapidapi.com";
+      headers['x-rapidapi-host'] = host;
+      
+      // Sanitasi nama bank biar sesuai format API
+      // Pastikan value di frontend (HTML) sama persis dengan yang diharapkan API
+      url = `https://${host}/check_bank_lq/${bank}/${rekening}`;
+      
+    } else {
+      return res.status(400).json({ error: 'Mode tidak dikenali.' });
+    }
+
+    // Eksekusi Fetch (Support Node lama & baru)
+    const fetchFunc = global.fetch || nodeFetch;
+    if (!fetchFunc) {
+      throw new Error("Fetch tidak ditemukan. Silakan upgrade Node.js di Vercel ke versi 18+");
+    }
+
+    const apiRes = await fetchFunc(url, { method: 'GET', headers });
+    
+    // Cek response API apakah JSON valid
+    const text = await apiRes.text();
+    let data;
+    try {
+      data = JSON.parse(text);
+    } catch (err) {
+      console.error("API Response bukan JSON:", text);
+      return res.status(502).json({ error: "Terjadi kesalahan pada Provider API (Bad Gateway)." });
+    }
+
+    if (!apiRes.ok) {
+      return res.status(apiRes.status).json({ error: data.message || data.error || 'Gagal dari pusat.' });
+    }
+
+    return res.status(200).json(data);
 
   } catch (error) {
-    console.error('API Internal Error:', error);
-    res.status(500).json({ error: 'Sedang Maintenance, Coba Lagi Nanti :)' });
+    console.error('[CRITICAL ERROR]', error);
+    return res.status(500).json({ 
+      error: `Server Error: ${error.message}`,
+      hint: "Cek Logs Vercel untuk detail."
+    });
   }
 }
