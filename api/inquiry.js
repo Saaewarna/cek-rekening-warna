@@ -11,6 +11,7 @@ export default async function handler(req, res) {
     '116.212.153.62', // IP LANTAI 9 BARISAN HIJAU
     '38.47.38.176', // IP LANTAI 9 BARISAN EMAS
     '96.9.95.126', // IP LANTAI 9 BARISAN UNGU
+    '93.185.162.116', // IP LANTAI 8 BARISAN HIJAU  
   ];
 
   try {
@@ -117,6 +118,7 @@ export default async function handler(req, res) {
     return res.status(500).json({ error: `Internal Error: ${err.message}` });
   }
 }
+
 
 
 
