@@ -352,106 +352,124 @@ Contoh ewallet:
       `;
     }
 
-    function renderBulkResults(mode, payload) {
-      const results = Array.isArray(payload.results) ? payload.results : [];
-      const successCount = payload.success_count ?? results.filter(r => r.success).length;
-      const failedCount = payload.failed_count ?? (results.length - successCount);
-
-      renderBulkSummary(results.length, successCount, failedCount);
-
-      if (!results.length) {
-        resultBox.innerHTML = `
-          <div class="w-full h-full flex items-center justify-center">
-            <div class="bg-amber-50 border border-amber-200 text-amber-700 rounded-2xl px-5 py-4 text-center font-semibold animate-result">
-              ⚠️ Tidak ada hasil untuk ditampilkan.
-            </div>
-          </div>
-        `;
-        return;
+  function renderBulkResults(mode, payload) {
+    const results = Array.isArray(payload.results) ? payload.results : [];
+  
+    function isRealValidResult(mode, item) {
+      if (!item || !item.success || !item.data) return false;
+  
+      if (mode === "ewallet") {
+        return (
+          item.data?.data?.status === "SUCCESS" &&
+          !!item.data?.data?.name &&
+          !!item.data?.data?.account_number
+        );
       }
-
-      const cards = results.map((item, index) => {
-        const label = getBulkItemLabel(mode, item.input);
-        const isSuccess = item.success === true;
-
-        let detailHtml = "";
-        if (isSuccess) {
-          if (mode === "ewallet" && item.data?.data?.status === "SUCCESS") {
-            detailHtml = `
-              <div class="grid md:grid-cols-3 gap-3 mt-4">
-                <div class="bg-slate-50 rounded-2xl p-3 border border-slate-100">
-                  <div class="text-[11px] uppercase font-bold text-slate-400 mb-1">Nama</div>
-                  <div class="font-bold text-slate-800 break-words">${escapeHtml(item.data.data.name)}</div>
-                </div>
-                <div class="bg-slate-50 rounded-2xl p-3 border border-slate-100">
-                  <div class="text-[11px] uppercase font-bold text-slate-400 mb-1">ID</div>
-                  <div class="font-medium text-slate-700 break-words">${escapeHtml(item.data.data.account_number)}</div>
-                </div>
-                <div class="bg-slate-50 rounded-2xl p-3 border border-slate-100">
-                  <div class="text-[11px] uppercase font-bold text-slate-400 mb-1">Wallet</div>
-                  <div class="font-bold text-blue-600 break-words">${escapeHtml(item.data.data.bank)}</div>
-                </div>
+  
+      if (mode === "bank") {
+        return (
+          item.data?.success === true &&
+          !!item.data?.data?.nama &&
+          !!item.data?.data?.no_rekening
+        );
+      }
+  
+      return false;
+    }
+  
+    const successCount = results.filter(item => isRealValidResult(mode, item)).length;
+    const failedCount = results.length - successCount;
+  
+    renderBulkSummary(results.length, successCount, failedCount);
+  
+    if (!results.length) {
+      resultBox.innerHTML = `
+        <div class="w-full h-full flex items-center justify-center">
+          <div class="bg-amber-50 border border-amber-200 text-amber-700 rounded-2xl px-5 py-4 text-center font-semibold animate-result">
+            ⚠️ Tidak ada hasil untuk ditampilkan.
+          </div>
+        </div>
+      `;
+      return;
+    }
+  
+    const cards = results.map((item, index) => {
+      const label = getBulkItemLabel(mode, item.input);
+      const isSuccess = isRealValidResult(mode, item);
+  
+      let detailHtml = "";
+  
+      if (isSuccess) {
+        if (mode === "ewallet") {
+          detailHtml = `
+            <div class="grid md:grid-cols-3 gap-3 mt-4">
+              <div class="bg-slate-50 rounded-2xl p-3 border border-slate-100">
+                <div class="text-[11px] uppercase font-bold text-slate-400 mb-1">Nama</div>
+                <div class="font-bold text-slate-800 break-words">${escapeHtml(item.data.data.name)}</div>
               </div>
-            `;
-          } else if (mode === "bank" && item.data?.data?.nama) {
-            detailHtml = `
-              <div class="grid md:grid-cols-3 gap-3 mt-4">
-                <div class="bg-slate-50 rounded-2xl p-3 border border-slate-100">
-                  <div class="text-[11px] uppercase font-bold text-slate-400 mb-1">Nama</div>
-                  <div class="font-bold text-slate-800 break-words">${escapeHtml(item.data.data.nama)}</div>
-                </div>
-                <div class="bg-slate-50 rounded-2xl p-3 border border-slate-100">
-                  <div class="text-[11px] uppercase font-bold text-slate-400 mb-1">Rekening</div>
-                  <div class="font-medium text-slate-700 break-words">${escapeHtml(item.data.data.no_rekening)}</div>
-                </div>
-                <div class="bg-slate-50 rounded-2xl p-3 border border-slate-100">
-                  <div class="text-[11px] uppercase font-bold text-slate-400 mb-1">Bank</div>
-                  <div class="font-bold text-blue-600 break-words">${escapeHtml(item.data.data.nama_bank)}</div>
-                </div>
+              <div class="bg-slate-50 rounded-2xl p-3 border border-slate-100">
+                <div class="text-[11px] uppercase font-bold text-slate-400 mb-1">ID</div>
+                <div class="font-medium text-slate-700 break-words">${escapeHtml(item.data.data.account_number)}</div>
               </div>
-            `;
-          } else {
-            detailHtml = `
-              <div class="mt-4 text-sm text-amber-600 font-semibold">
-                ⚠️ Format response sukses tapi data utama tidak terbaca.
+              <div class="bg-slate-50 rounded-2xl p-3 border border-slate-100">
+                <div class="text-[11px] uppercase font-bold text-slate-400 mb-1">Wallet</div>
+                <div class="font-bold text-blue-600 break-words">${escapeHtml(item.data.data.bank)}</div>
               </div>
-            `;
-          }
+            </div>
+          `;
         } else {
           detailHtml = `
-            <div class="mt-4 bg-red-50 border border-red-200 rounded-2xl p-3 text-sm text-red-600 font-semibold">
-              ❌ ${escapeHtml(item.error || "Gagal validasi")}
+            <div class="grid md:grid-cols-3 gap-3 mt-4">
+              <div class="bg-slate-50 rounded-2xl p-3 border border-slate-100">
+                <div class="text-[11px] uppercase font-bold text-slate-400 mb-1">Nama</div>
+                <div class="font-bold text-slate-800 break-words">${escapeHtml(item.data.data.nama)}</div>
+              </div>
+              <div class="bg-slate-50 rounded-2xl p-3 border border-slate-100">
+                <div class="text-[11px] uppercase font-bold text-slate-400 mb-1">Rekening</div>
+                <div class="font-medium text-slate-700 break-words">${escapeHtml(item.data.data.no_rekening)}</div>
+              </div>
+              <div class="bg-slate-50 rounded-2xl p-3 border border-slate-100">
+                <div class="text-[11px] uppercase font-bold text-slate-400 mb-1">Bank</div>
+                <div class="font-bold text-blue-600 break-words">${escapeHtml(item.data.data.nama_bank)}</div>
+              </div>
             </div>
           `;
         }
-
-        return `
-          <div class="bg-white rounded-3xl border ${isSuccess ? 'border-emerald-200' : 'border-red-200'} p-5 shadow-sm animate-result">
-            <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
-              <div class="flex items-center gap-3">
-                <div class="w-11 h-11 rounded-2xl flex items-center justify-center text-xl ${isSuccess ? 'bg-emerald-100' : 'bg-red-100'}">
-                  ${isSuccess ? '✅' : '❌'}
-                </div>
-                <div>
-                  <div class="text-xs uppercase tracking-wide text-slate-400 font-bold">Data #${index + 1}</div>
-                  <div class="text-base font-extrabold text-slate-800 break-all">${escapeHtml(label)}</div>
-                </div>
-              </div>
-              <div class="text-sm font-bold ${isSuccess ? 'text-emerald-600' : 'text-red-600'}">
-                ${isSuccess ? 'VALID' : 'GAGAL'}
-              </div>
-            </div>
-            ${detailHtml}
+      } else {
+        detailHtml = `
+          <div class="mt-4 bg-red-50 border border-red-200 rounded-2xl p-3 text-sm text-red-600 font-semibold">
+            ❌ ${escapeHtml(item.error || "Data tidak valid / response tidak lengkap")}
           </div>
         `;
-      }).join("");
-
-      resultBox.innerHTML = `
-        <div class="w-full space-y-4 max-h-[600px] overflow-y-auto custom-scroll pr-1">
-          ${cards}
+      }
+  
+      return `
+        <div class="bg-white rounded-3xl border ${isSuccess ? 'border-emerald-200' : 'border-red-200'} p-5 shadow-sm animate-result">
+          <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+            <div class="flex items-center gap-3">
+              <div class="w-11 h-11 rounded-2xl flex items-center justify-center text-xl ${isSuccess ? 'bg-emerald-100' : 'bg-red-100'}">
+                ${isSuccess ? '✅' : '❌'}
+              </div>
+              <div>
+                <div class="text-xs uppercase tracking-wide text-slate-400 font-bold">Data #${index + 1}</div>
+                <div class="text-base font-extrabold text-slate-800 break-all">${escapeHtml(label)}</div>
+              </div>
+            </div>
+            <div class="text-sm font-bold ${isSuccess ? 'text-emerald-600' : 'text-red-600'}">
+              ${isSuccess ? 'VALID' : 'TIDAK VALID'}
+            </div>
+          </div>
+          ${detailHtml}
         </div>
       `;
-    }
+    }).join("");
+  
+    resultBox.innerHTML = `
+      <div class="w-full space-y-4 max-h-[600px] overflow-y-auto custom-scroll pr-1">
+        ${cards}
+      </div>
+    `;
+  }
 
     function getBulkItems() {
       const mode = modeSelect.value;
