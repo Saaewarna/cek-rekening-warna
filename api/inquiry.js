@@ -1,24 +1,26 @@
 export default async function handler(req, res) {
-  // ==========================================
-  // 1. CONFIG: IP WHITELIST & API KEY
-  // ==========================================
   const ALLOWED_IPS = [
     '127.0.0.1',
     '::1',
-    // Masukkan IP Publik kamu di bawah (Cek Logs Vercel kalau error)
-    '38.47.38.176', // IP LANTAI 8 BARISAN MERONA
-    '45.201.166.118', // IP LANTAI 9 BARISAN BIRU
-    '116.212.153.62', // IP LANTAI 9 BARISAN HIJAU
-    '38.47.38.176', // IP LANTAI 9 BARISAN EMAS
-    '96.9.95.126', // IP LANTAI 9 BARISAN UNGU
-    '93.185.162.116', // IP LANTAI 8 BARISAN HIJAU  
+    '38.47.38.176',
+    '45.201.166.118',
+    '116.212.153.62',
+    '96.9.95.126',
+    '93.185.162.116',
   ];
 
+  const MAX_BULK = 50;
+  const CONCURRENCY = 5;
+
   try {
-    // ----------------------------------------
-    // CEK IP (SECURITY)
-    // ----------------------------------------
-    let clientIp = req.headers['x-forwarded-for'] || req.socket?.remoteAddress || '';
+    // ==========================================
+    // 1. CEK IP
+    // ==========================================
+    let clientIp =
+      req.headers['x-forwarded-for'] ||
+      req.socket?.remoteAddress ||
+      '';
+
     if (clientIp.includes(',')) clientIp = clientIp.split(',')[0].trim();
 
     console.log(`[DEBUG] Request masuk dari IP: ${clientIp}`);
@@ -27,99 +29,202 @@ export default async function handler(req, res) {
       return res.status(403).json({
         success: false,
         error: `Akses ditolak, IP kamu (${clientIp}) belum di Whitelist.`,
-        your_ip: clientIp
+        your_ip: clientIp,
       });
     }
 
-    // ----------------------------------------
-    // CEK API KEY (Mencegah Error 500 krn Key hilang)
-    // ----------------------------------------
+    // ==========================================
+    // 2. CEK API KEY
+    // ==========================================
     if (!process.env.RAPIDAPI_KEY) {
       console.error('[CRITICAL] RAPIDAPI_KEY belum disetting di Vercel!');
-      return res.status(500).json({ error: 'Server Config Error: API Key belum dipasang di Vercel.' });
+      return res.status(500).json({
+        error: 'Server Config Error: API Key belum dipasang di Vercel.',
+      });
     }
 
     // ==========================================
-    // 2. PROSES REQUEST
+    // 3. HELPER FETCH SINGLE
     // ==========================================
-    const { mode, id, provider, bank, rekening } = req.query;
-    
-    // Siapkan Header
-    const headers = {
-      'x-rapidapi-key': process.env.RAPIDAPI_KEY,
-      'Content-Type': 'application/json'
-    };
+    async function fetchSingleInquiry({ mode, id, provider, bank, rekening }) {
+      const headers = {
+        'x-rapidapi-key': process.env.RAPIDAPI_KEY,
+        'Content-Type': 'application/json',
+      };
 
-    let url = '';
-    
-    if (mode === 'ewallet') {
-      if (!id || !provider) throw new Error('Data e-wallet tidak lengkap.');
-      
-      const p = provider.toLowerCase().trim();
-      const host = process.env.RAPIDAPI_HOST || 'cek-e-wallet.p.rapidapi.com'; 
-      headers['x-rapidapi-host'] = host;
-      
-      // EncodeURIComponent penting biar ID yang aneh-aneh gak bikin error
-      url = (p === 'linkaja')
-        ? `https://${host}/cekewallet/${encodeURIComponent(id)}/LINKAJA`
-        : `https://${host}/cek_ewallet/${encodeURIComponent(id)}/${encodeURIComponent(p)}`;
+      let url = '';
 
-    } else if (mode === 'bank') {
-      if (!bank || !rekening) throw new Error('Data bank tidak lengkap.');
+      if (mode === 'ewallet') {
+        if (!id || !provider) {
+          return {
+            success: false,
+            error: 'Data e-wallet tidak lengkap.',
+            input: { id, provider },
+          };
+        }
 
-      const host = 'cek-nomor-rekening-bank.p.rapidapi.com';
-      headers['x-rapidapi-host'] = host;
-      
-      // [FIX ERROR 500] Gunakan encodeURIComponent untuk menangani spasi (misal "bank bca")
-      url = `https://${host}/check_bank_lq/${encodeURIComponent(bank)}/${encodeURIComponent(rekening)}`;
+        const p = provider.toLowerCase().trim();
+        const host = process.env.RAPIDAPI_HOST || 'cek-e-wallet.p.rapidapi.com';
+        headers['x-rapidapi-host'] = host;
 
-    } else {
-      return res.status(400).json({ error: 'Mode tidak valid.' });
-    }
+        url =
+          p === 'linkaja'
+            ? `https://${host}/cekewallet/${encodeURIComponent(id)}/LINKAJA`
+            : `https://${host}/cek_ewallet/${encodeURIComponent(id)}/${encodeURIComponent(p)}`;
+      } else if (mode === 'bank') {
+        if (!bank || !rekening) {
+          return {
+            success: false,
+            error: 'Data bank tidak lengkap.',
+            input: { bank, rekening },
+          };
+        }
 
-    // ----------------------------------------
-    // EKSEKUSI FETCH
-    // ----------------------------------------
-    // Timeout 10 detik biar gak loading selamanya
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 10000);
+        const host = 'cek-nomor-rekening-bank.p.rapidapi.com';
+        headers['x-rapidapi-host'] = host;
 
-    try {
-      console.log(`[DEBUG] Fetching URL: ${url}`); // Cek URL di Logs kalau error
-      const apiReq = await fetch(url, { headers, signal: controller.signal });
-      clearTimeout(timeout);
-
-      // Cek apakah response berupa JSON
-      const contentType = apiReq.headers.get("content-type");
-      if (!contentType || !contentType.includes("application/json")) {
-        const text = await apiReq.text();
-        console.error("[API ERROR] Response bukan JSON:", text);
-        return res.status(502).json({ error: "Terjadi gangguan pada Provider API (Bad Gateway)." });
+        url = `https://${host}/check_bank_lq/${encodeURIComponent(bank)}/${encodeURIComponent(rekening)}`;
+      } else {
+        return {
+          success: false,
+          error: 'Mode tidak valid.',
+        };
       }
 
-      const data = await apiReq.json();
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 10000);
 
-      if (!apiReq.ok) {
-        return res.status(apiReq.status).json({ 
-          error: data.message || data.error || 'Gagal validasi dari pusat.' 
+      try {
+        console.log(`[DEBUG] Fetching URL: ${url}`);
+        const apiReq = await fetch(url, {
+          headers,
+          signal: controller.signal,
+        });
+
+        clearTimeout(timeout);
+
+        const contentType = apiReq.headers.get('content-type');
+        if (!contentType || !contentType.includes('application/json')) {
+          const text = await apiReq.text();
+          console.error('[API ERROR] Response bukan JSON:', text);
+          return {
+            success: false,
+            error: 'Provider API mengembalikan response non-JSON.',
+            raw: text,
+          };
+        }
+
+        const data = await apiReq.json();
+
+        if (!apiReq.ok) {
+          return {
+            success: false,
+            error: data.message || data.error || 'Gagal validasi dari pusat.',
+            data,
+          };
+        }
+
+        return {
+          success: true,
+          data,
+        };
+      } catch (fetchError) {
+        clearTimeout(timeout);
+        console.error('[FETCH ERROR]', fetchError);
+        return {
+          success: false,
+          error: 'Koneksi ke server pusat timeout/gagal.',
+        };
+      }
+    }
+
+    // ==========================================
+    // 4. BULK MODE (POST)
+    // ==========================================
+    if (req.method === 'POST') {
+      const { mode, items } = req.body || {};
+
+      if (!mode || !Array.isArray(items)) {
+        return res.status(400).json({
+          success: false,
+          error: 'Body harus berisi mode dan items[].',
         });
       }
 
-      return res.status(200).json(data);
+      if (items.length < 1) {
+        return res.status(400).json({
+          success: false,
+          error: 'Items tidak boleh kosong.',
+        });
+      }
 
-    } catch (fetchError) {
-      clearTimeout(timeout);
-      console.error('[FETCH ERROR]', fetchError);
-      return res.status(502).json({ error: 'Koneksi ke server pusat timeout/gagal.' });
+      if (items.length > MAX_BULK) {
+        return res.status(400).json({
+          success: false,
+          error: `Maksimal bulk ${MAX_BULK} data per request.`,
+        });
+      }
+
+      const results = [];
+
+      for (let i = 0; i < items.length; i += CONCURRENCY) {
+        const chunk = items.slice(i, i + CONCURRENCY);
+
+        const chunkResults = await Promise.all(
+          chunk.map(async (item) => {
+            const result = await fetchSingleInquiry({
+              mode,
+              id: item.id,
+              provider: item.provider,
+              bank: item.bank,
+              rekening: item.rekening,
+            });
+
+            return {
+              input: item,
+              ...result,
+            };
+          })
+        );
+
+        results.push(...chunkResults);
+      }
+
+      const successCount = results.filter((r) => r.success).length;
+      const failedCount = results.length - successCount;
+
+      return res.status(200).json({
+        success: true,
+        mode,
+        total: results.length,
+        success_count: successCount,
+        failed_count: failedCount,
+        results,
+      });
     }
 
+    // ==========================================
+    // 5. SINGLE MODE (GET)
+    // ==========================================
+    const { mode, id, provider, bank, rekening } = req.query;
+
+    const single = await fetchSingleInquiry({
+      mode,
+      id,
+      provider,
+      bank,
+      rekening,
+    });
+
+    if (!single.success) {
+      return res.status(400).json(single);
+    }
+
+    return res.status(200).json(single.data);
   } catch (err) {
     console.error('[SERVER ERROR]', err);
-    return res.status(500).json({ error: `Internal Error: ${err.message}` });
+    return res.status(500).json({
+      error: `Internal Error: ${err.message}`,
+    });
   }
 }
-
-
-
-
-
