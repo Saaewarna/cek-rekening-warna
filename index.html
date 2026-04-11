@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>WarnaGroup Cekrek Bulk</title>
+  <title>WarnaGroup Cekrek</title>
   <link rel="icon" type="image/png" href="https://images.icon-icons.com/2746/PNG/512/rainbow_icon_175988.png">
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
@@ -127,12 +127,12 @@
                 <div id="formatHint">
                   - 1 baris = 1 data<br>
                   - Maksimal 30 data total<br>
-                  - Diproses otomatis per batch
+                  - Diproses satu per satu
                 </div>
               </div>
 
               <div class="mt-3 bg-amber-50 border border-amber-200 text-amber-700 rounded-xl px-3 py-2 text-xs font-semibold">
-                Limit provider: 30 request/menit. Maksimal input dibuat 30 data.
+                Limit provider: 30 request/menit. Sistem bulk dijalankan satu per satu dengan jeda 2 detik.
               </div>
             </div>
 
@@ -199,7 +199,7 @@
     const exportXlsxBtn = document.getElementById("exportXlsxBtn");
 
     const MAX_TOTAL_BULK = 30;
-    const BATCH_SIZE = 10;
+    const REQUEST_DELAY_MS = 2000;
     let lastBulkExportRows = [];
 
     function escapeHtml(value) {
@@ -209,6 +209,10 @@
         .replace(/>/g, "&gt;")
         .replace(/"/g, "&quot;")
         .replace(/'/g, "&#039;");
+    }
+
+    function sleep(ms) {
+      return new Promise(resolve => setTimeout(resolve, ms));
     }
 
     function updateModeUI() {
@@ -287,14 +291,6 @@
       }
 
       throw new Error(rawText || `HTTP ${res.status} ${res.statusText}`);
-    }
-
-    function chunkArray(arr, size) {
-      const chunks = [];
-      for (let i = 0; i < arr.length; i += size) {
-        chunks.push(arr.slice(i, i + size));
-      }
-      return chunks;
     }
 
     function formatDateTimeForFilename() {
@@ -658,35 +654,32 @@
         }
 
         const items = getBulkItems();
-        const batches = chunkArray(items, BATCH_SIZE);
         const mergedResults = [];
 
-        for (let i = 0; i < batches.length; i++) {
-          renderLoading(`Memproses batch ${i + 1}/${batches.length} (${batches[i].length} data)...`);
+        for (let i = 0; i < items.length; i++) {
+          renderLoading(`Memproses ${i + 1}/${items.length}...`);
 
-          const res = await fetch(`/api/inquiry`, {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json"
-            },
-            body: JSON.stringify({
-              mode,
-              items: batches[i]
-            })
-          });
+          let res;
+          if (mode === "ewallet") {
+            const query = `?mode=ewallet&id=${encodeURIComponent(items[i].id)}&provider=${encodeURIComponent(items[i].provider)}`;
+            res = await fetch(`/api/inquiry${query}`);
+          } else {
+            const query = `?mode=bank&bank=${encodeURIComponent(items[i].bank)}&rekening=${encodeURIComponent(items[i].rekening)}`;
+            res = await fetch(`/api/inquiry${query}`);
+          }
 
           const data = await safeParseResponse(res);
 
-          if (!res.ok || !data) {
-            throw new Error(data?.error || `Batch ${i + 1} gagal diproses.`);
-          }
+          mergedResults.push({
+            success: data?.success === true,
+            is_valid: data?.is_valid === true,
+            input: data?.input || items[i],
+            data: data?.data || null,
+            error: data?.error || null
+          });
 
-          if (data.error) {
-            throw new Error(data.error);
-          }
-
-          if (Array.isArray(data.results)) {
-            mergedResults.push(...data.results);
+          if (i < items.length - 1) {
+            await sleep(REQUEST_DELAY_MS);
           }
         }
 
