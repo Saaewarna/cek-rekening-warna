@@ -3,9 +3,10 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>WarnaGroup Cekrek</title>
+  <title>WarnaGroup Cekrek Bulk</title>
   <link rel="icon" type="image/png" href="https://images.icon-icons.com/2746/PNG/512/rainbow_icon_175988.png">
   <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 
   <style>
@@ -129,6 +130,10 @@
                   - Diproses otomatis per batch
                 </div>
               </div>
+
+              <div class="mt-3 bg-amber-50 border border-amber-200 text-amber-700 rounded-xl px-3 py-2 text-xs font-semibold">
+                Limit provider: 30 request/menit. Maksimal input dibuat 30 data.
+              </div>
             </div>
 
             <div class="grid grid-cols-2 gap-3">
@@ -149,7 +154,18 @@
               <h2 class="text-2xl font-extrabold text-slate-800">Hasil Validasi</h2>
               <p class="text-sm text-slate-500">Semua hasil cek akan muncul di sini.</p>
             </div>
-            <div id="summaryBox" class="hidden flex flex-wrap gap-2"></div>
+
+            <div class="flex flex-col md:flex-row md:items-center gap-3">
+              <div id="summaryBox" class="hidden flex flex-wrap gap-2"></div>
+
+              <button
+                type="button"
+                id="exportXlsxBtn"
+                class="hidden px-4 py-2 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-bold shadow-lg shadow-emerald-200"
+              >
+                Export XLSX
+              </button>
+            </div>
           </div>
 
           <div id="resultBox" class="min-h-[500px] rounded-3xl bg-slate-50 border border-dashed border-slate-200 p-4 md:p-5 flex items-center justify-center">
@@ -180,9 +196,11 @@
     const summaryBox = document.getElementById("summaryBox");
     const clearBtn = document.getElementById("clearBtn");
     const fillExampleBtn = document.getElementById("fillExampleBtn");
+    const exportXlsxBtn = document.getElementById("exportXlsxBtn");
 
     const MAX_TOTAL_BULK = 30;
     const BATCH_SIZE = 10;
+    let lastBulkExportRows = [];
 
     function escapeHtml(value) {
       return String(value ?? "")
@@ -233,6 +251,7 @@
     function renderLoading(text = "Sedang memproses...") {
       summaryBox.classList.add("hidden");
       summaryBox.innerHTML = "";
+      exportXlsxBtn.classList.add("hidden");
       resultBox.innerHTML = `
         <div class="flex flex-col items-center gap-3 text-center">
           <div class="w-10 h-10 border-4 border-blue-600/20 border-t-blue-600 rounded-full animate-spin"></div>
@@ -244,6 +263,8 @@
     function renderError(message) {
       summaryBox.classList.add("hidden");
       summaryBox.innerHTML = "";
+      exportXlsxBtn.classList.add("hidden");
+      lastBulkExportRows = [];
       resultBox.innerHTML = `
         <div class="w-full h-full flex items-center justify-center">
           <div class="bg-red-50 border border-red-200 text-red-600 rounded-2xl px-5 py-4 text-center font-semibold animate-result">
@@ -276,7 +297,85 @@
       return chunks;
     }
 
+    function formatDateTimeForFilename() {
+      const now = new Date();
+      const pad = (n) => String(n).padStart(2, "0");
+      return `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}_${pad(now.getHours())}-${pad(now.getMinutes())}-${pad(now.getSeconds())}`;
+    }
+
+    function isRealValidResult(mode, item) {
+      if (!item) return false;
+      if (item.is_valid === true) return true;
+      if (item.success !== true || !item.data) return false;
+
+      if (mode === "ewallet") {
+        return (
+          item.data?.data?.status === "SUCCESS" &&
+          !!item.data?.data?.name &&
+          !!item.data?.data?.account_number
+        );
+      }
+
+      if (mode === "bank") {
+        return (
+          item.data?.success === true &&
+          !!item.data?.data?.nama &&
+          !!item.data?.data?.no_rekening
+        );
+      }
+
+      return false;
+    }
+
+    function buildExportRows(mode, results) {
+      return results.map((item, index) => {
+        const isSuccess = isRealValidResult(mode, item);
+        const data = item?.data?.data || {};
+
+        if (mode === "ewallet") {
+          return {
+            No: index + 1,
+            Status: isSuccess ? "SUKSES" : "GAGAL",
+            Provider: item?.input?.provider || "",
+            Nomor: item?.input?.id || "",
+            Nama: isSuccess ? (data.name || "") : "",
+            ID_Akun: isSuccess ? (data.account_number || "") : "",
+            Wallet: isSuccess ? (data.bank || "") : "",
+            Error: isSuccess ? "" : (item?.error || "Data tidak valid / response tidak lengkap")
+          };
+        }
+
+        return {
+          No: index + 1,
+          Status: isSuccess ? "SUKSES" : "GAGAL",
+          Bank: item?.input?.bank || "",
+          Rekening_Input: item?.input?.rekening || "",
+          Nama: isSuccess ? (data.nama || "") : "",
+          No_Rekening_Hasil: isSuccess ? (data.no_rekening || "") : "",
+          Nama_Bank: isSuccess ? (data.nama_bank || "") : "",
+          Error: isSuccess ? "" : (item?.error || "Data tidak valid / response tidak lengkap")
+        };
+      });
+    }
+
+    function exportRowsToXlsx(rows, mode) {
+      if (!rows.length) {
+        renderError("Belum ada hasil bulk untuk diexport.");
+        return;
+      }
+
+      const worksheet = XLSX.utils.json_to_sheet(rows);
+      const workbook = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(workbook, worksheet, "Hasil Validasi");
+
+      const filename = `hasil-validasi-${mode}-${formatDateTimeForFilename()}.xlsx`;
+      XLSX.writeFile(workbook, filename);
+    }
+
     function renderSingleResult(mode, data) {
+      exportXlsxBtn.classList.add("hidden");
+      lastBulkExportRows = [];
+
       let html = "";
 
       if (mode === "ewallet" && data.data?.status === "SUCCESS") {
@@ -365,34 +464,14 @@
       `;
     }
 
-    function isRealValidResult(mode, item) {
-      if (!item) return false;
-      if (item.is_valid === true) return true;
-      if (item.success !== true || !item.data) return false;
-
-      if (mode === "ewallet") {
-        return (
-          item.data?.data?.status === "SUCCESS" &&
-          !!item.data?.data?.name &&
-          !!item.data?.data?.account_number
-        );
-      }
-
-      if (mode === "bank") {
-        return (
-          item.data?.success === true &&
-          !!item.data?.data?.nama &&
-          !!item.data?.data?.no_rekening
-        );
-      }
-
-      return false;
-    }
-
     function renderBulkResults(mode, payload) {
       const results = Array.isArray(payload.results) ? payload.results : [];
       const successCount = results.filter(item => isRealValidResult(mode, item)).length;
       const failedCount = results.length - successCount;
+
+      lastBulkExportRows = buildExportRows(mode, results);
+      exportXlsxBtn.classList.toggle("hidden", results.length === 0);
+      exportXlsxBtn.onclick = () => exportRowsToXlsx(lastBulkExportRows, mode);
 
       renderBulkSummary(results.length, successCount, failedCount);
 
@@ -530,6 +609,8 @@
       updateInputTypeUI();
       summaryBox.classList.add("hidden");
       summaryBox.innerHTML = "";
+      exportXlsxBtn.classList.add("hidden");
+      lastBulkExportRows = [];
       resultBox.innerHTML = `
         <div class="text-center">
           <div class="text-5xl mb-3">🔍</div>
