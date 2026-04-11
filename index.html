@@ -10,9 +10,7 @@
 
   <style>
     body { font-family: 'Plus Jakarta Sans', sans-serif; }
-    * {
-      transition: all 0.2s ease-in-out;
-    }
+    * { transition: all 0.2s ease-in-out; }
     .glass {
       background: rgba(255, 255, 255, 0.96);
       backdrop-filter: blur(12px);
@@ -43,7 +41,6 @@
     <div class="glass rounded-[32px] shadow-[0_20px_60px_rgba(8,_112,_184,_0.12)] border border-white/60 overflow-hidden">
       <div class="grid lg:grid-cols-[420px_1fr] min-h-[720px]">
         
-        <!-- LEFT PANEL -->
         <div class="p-6 md:p-8 border-b lg:border-b-0 lg:border-r border-slate-200/70">
           <div class="mb-8">
             <div class="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-blue-100 mb-4">
@@ -103,7 +100,6 @@
               </select>
             </div>
 
-            <!-- SINGLE -->
             <div id="singleWrapper">
               <label id="idLabel" class="block text-sm font-semibold text-slate-700 mb-1.5 ml-1">Nomor HP / ID:</label>
               <input id="id" type="text" autocomplete="off"
@@ -111,7 +107,6 @@
                 placeholder="Masukkan nomor" />
             </div>
 
-            <!-- BULK -->
             <div id="bulkWrapper" class="hidden">
               <div class="flex items-center justify-between mb-1.5">
                 <label id="bulkLabel" class="block text-sm font-semibold text-slate-700 ml-1">Data Bulk:</label>
@@ -122,20 +117,16 @@
 
               <textarea id="bulkInput" rows="10"
                 class="custom-scroll w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-700 placeholder:text-slate-400 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none resize-none"
-                placeholder="Contoh bank:
-1234567890
-9876543210
-
-Contoh ewallet:
+                placeholder="Contoh:
 081234567890
 081298765432"></textarea>
 
               <div class="mt-2 text-xs text-slate-500 leading-5 bg-slate-50 rounded-xl p-3 border border-slate-200">
                 <div class="font-semibold text-slate-700 mb-1">Format bulk:</div>
                 <div id="formatHint">
-                  - Bank: 1 baris = 1 nomor rekening<br>
-                  - E-Wallet: 1 baris = 1 nomor HP / ID<br>
-                  - Maksimal 50 data per request
+                  - 1 baris = 1 data<br>
+                  - Maksimal 50 data total<br>
+                  - Akan diproses otomatis per batch
                 </div>
               </div>
             </div>
@@ -152,7 +143,6 @@ Contoh ewallet:
           </form>
         </div>
 
-        <!-- RIGHT PANEL -->
         <div class="p-6 md:p-8 bg-white/50">
           <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-3 mb-6">
             <div>
@@ -191,6 +181,9 @@ Contoh ewallet:
     const clearBtn = document.getElementById("clearBtn");
     const fillExampleBtn = document.getElementById("fillExampleBtn");
 
+    const MAX_TOTAL_BULK = 50;
+    const BATCH_SIZE = 10;
+
     function escapeHtml(value) {
       return String(value ?? "")
         .replace(/&/g, "&amp;")
@@ -212,7 +205,7 @@ Contoh ewallet:
         formatHint.innerHTML = `
           - 1 baris = 1 nomor HP / ID<br>
           - Provider mengikuti dropdown di atas<br>
-          - Maksimal 50 data per request
+          - Maksimal ${MAX_TOTAL_BULK} data total
         `;
         bulkInput.placeholder = `Contoh:
 081234567890
@@ -222,7 +215,7 @@ Contoh ewallet:
         formatHint.innerHTML = `
           - 1 baris = 1 nomor rekening<br>
           - Bank mengikuti dropdown di atas<br>
-          - Maksimal 50 data per request
+          - Maksimal ${MAX_TOTAL_BULK} data total
         `;
         bulkInput.placeholder = `Contoh:
 1234567890
@@ -243,7 +236,7 @@ Contoh ewallet:
       resultBox.innerHTML = `
         <div class="flex flex-col items-center gap-3 text-center">
           <div class="w-10 h-10 border-4 border-blue-600/20 border-t-blue-600 rounded-full animate-spin"></div>
-          <p class="text-blue-500 text-sm font-semibold">${text}</p>
+          <p class="text-blue-500 text-sm font-semibold">${escapeHtml(text)}</p>
         </div>
       `;
     }
@@ -258,6 +251,29 @@ Contoh ewallet:
           </div>
         </div>
       `;
+    }
+
+    async function safeParseResponse(res) {
+      const contentType = res.headers.get("content-type") || "";
+      const rawText = await res.text();
+
+      if (contentType.includes("application/json")) {
+        try {
+          return JSON.parse(rawText);
+        } catch {
+          throw new Error("Response JSON rusak / tidak valid.");
+        }
+      }
+
+      throw new Error(rawText || `HTTP ${res.status} ${res.statusText}`);
+    }
+
+    function chunkArray(arr, size) {
+      const chunks = [];
+      for (let i = 0; i < arr.length; i += size) {
+        chunks.push(arr.slice(i, i + size));
+      }
+      return chunks;
     }
 
     function renderSingleResult(mode, data) {
@@ -331,10 +347,7 @@ Contoh ewallet:
     }
 
     function getBulkItemLabel(mode, input) {
-      if (mode === "ewallet") {
-        return input?.id || "-";
-      }
-      return input?.rekening || "-";
+      return mode === "ewallet" ? (input?.id || "-") : (input?.rekening || "-");
     }
 
     function renderBulkSummary(total, successCount, failedCount) {
@@ -352,12 +365,11 @@ Contoh ewallet:
       `;
     }
 
-  function renderBulkResults(mode, payload) {
-    const results = Array.isArray(payload.results) ? payload.results : [];
-  
     function isRealValidResult(mode, item) {
-      if (!item || !item.success || !item.data) return false;
-  
+      if (!item) return false;
+      if (item.is_valid === true) return true;
+      if (item.success !== true || !item.data) return false;
+
       if (mode === "ewallet") {
         return (
           item.data?.data?.status === "SUCCESS" &&
@@ -365,7 +377,7 @@ Contoh ewallet:
           !!item.data?.data?.account_number
         );
       }
-  
+
       if (mode === "bank") {
         return (
           item.data?.success === true &&
@@ -373,103 +385,105 @@ Contoh ewallet:
           !!item.data?.data?.no_rekening
         );
       }
-  
+
       return false;
     }
-  
-    const successCount = results.filter(item => isRealValidResult(mode, item)).length;
-    const failedCount = results.length - successCount;
-  
-    renderBulkSummary(results.length, successCount, failedCount);
-  
-    if (!results.length) {
-      resultBox.innerHTML = `
-        <div class="w-full h-full flex items-center justify-center">
-          <div class="bg-amber-50 border border-amber-200 text-amber-700 rounded-2xl px-5 py-4 text-center font-semibold animate-result">
-            ⚠️ Tidak ada hasil untuk ditampilkan.
-          </div>
-        </div>
-      `;
-      return;
-    }
-  
-    const cards = results.map((item, index) => {
-      const label = getBulkItemLabel(mode, item.input);
-      const isSuccess = isRealValidResult(mode, item);
-  
-      let detailHtml = "";
-  
-      if (isSuccess) {
-        if (mode === "ewallet") {
-          detailHtml = `
-            <div class="grid md:grid-cols-3 gap-3 mt-4">
-              <div class="bg-slate-50 rounded-2xl p-3 border border-slate-100">
-                <div class="text-[11px] uppercase font-bold text-slate-400 mb-1">Nama</div>
-                <div class="font-bold text-slate-800 break-words">${escapeHtml(item.data.data.name)}</div>
-              </div>
-              <div class="bg-slate-50 rounded-2xl p-3 border border-slate-100">
-                <div class="text-[11px] uppercase font-bold text-slate-400 mb-1">ID</div>
-                <div class="font-medium text-slate-700 break-words">${escapeHtml(item.data.data.account_number)}</div>
-              </div>
-              <div class="bg-slate-50 rounded-2xl p-3 border border-slate-100">
-                <div class="text-[11px] uppercase font-bold text-slate-400 mb-1">Wallet</div>
-                <div class="font-bold text-blue-600 break-words">${escapeHtml(item.data.data.bank)}</div>
-              </div>
+
+    function renderBulkResults(mode, payload) {
+      const results = Array.isArray(payload.results) ? payload.results : [];
+      const successCount = results.filter(item => isRealValidResult(mode, item)).length;
+      const failedCount = results.length - successCount;
+
+      renderBulkSummary(results.length, successCount, failedCount);
+
+      if (!results.length) {
+        resultBox.innerHTML = `
+          <div class="w-full h-full flex items-center justify-center">
+            <div class="bg-amber-50 border border-amber-200 text-amber-700 rounded-2xl px-5 py-4 text-center font-semibold animate-result">
+              ⚠️ Tidak ada hasil untuk ditampilkan.
             </div>
-          `;
+          </div>
+        `;
+        return;
+      }
+
+      const cards = results.map((item, index) => {
+        const label = getBulkItemLabel(mode, item.input);
+        const isSuccess = isRealValidResult(mode, item);
+
+        let detailHtml = "";
+
+        if (isSuccess) {
+          if (mode === "ewallet") {
+            detailHtml = `
+              <div class="grid md:grid-cols-3 gap-3 mt-4">
+                <div class="bg-slate-50 rounded-2xl p-3 border border-slate-100">
+                  <div class="text-[11px] uppercase font-bold text-slate-400 mb-1">Nama</div>
+                  <div class="font-bold text-slate-800 break-words">${escapeHtml(item.data.data.name)}</div>
+                </div>
+                <div class="bg-slate-50 rounded-2xl p-3 border border-slate-100">
+                  <div class="text-[11px] uppercase font-bold text-slate-400 mb-1">ID</div>
+                  <div class="font-medium text-slate-700 break-words">${escapeHtml(item.data.data.account_number)}</div>
+                </div>
+                <div class="bg-slate-50 rounded-2xl p-3 border border-slate-100">
+                  <div class="text-[11px] uppercase font-bold text-slate-400 mb-1">Wallet</div>
+                  <div class="font-bold text-blue-600 break-words">${escapeHtml(item.data.data.bank)}</div>
+                </div>
+              </div>
+            `;
+          } else {
+            detailHtml = `
+              <div class="grid md:grid-cols-3 gap-3 mt-4">
+                <div class="bg-slate-50 rounded-2xl p-3 border border-slate-100">
+                  <div class="text-[11px] uppercase font-bold text-slate-400 mb-1">Nama</div>
+                  <div class="font-bold text-slate-800 break-words">${escapeHtml(item.data.data.nama)}</div>
+                </div>
+                <div class="bg-slate-50 rounded-2xl p-3 border border-slate-100">
+                  <div class="text-[11px] uppercase font-bold text-slate-400 mb-1">Rekening</div>
+                  <div class="font-medium text-slate-700 break-words">${escapeHtml(item.data.data.no_rekening)}</div>
+                </div>
+                <div class="bg-slate-50 rounded-2xl p-3 border border-slate-100">
+                  <div class="text-[11px] uppercase font-bold text-slate-400 mb-1">Bank</div>
+                  <div class="font-bold text-blue-600 break-words">${escapeHtml(item.data.data.nama_bank)}</div>
+                </div>
+              </div>
+            `;
+          }
         } else {
           detailHtml = `
-            <div class="grid md:grid-cols-3 gap-3 mt-4">
-              <div class="bg-slate-50 rounded-2xl p-3 border border-slate-100">
-                <div class="text-[11px] uppercase font-bold text-slate-400 mb-1">Nama</div>
-                <div class="font-bold text-slate-800 break-words">${escapeHtml(item.data.data.nama)}</div>
-              </div>
-              <div class="bg-slate-50 rounded-2xl p-3 border border-slate-100">
-                <div class="text-[11px] uppercase font-bold text-slate-400 mb-1">Rekening</div>
-                <div class="font-medium text-slate-700 break-words">${escapeHtml(item.data.data.no_rekening)}</div>
-              </div>
-              <div class="bg-slate-50 rounded-2xl p-3 border border-slate-100">
-                <div class="text-[11px] uppercase font-bold text-slate-400 mb-1">Bank</div>
-                <div class="font-bold text-blue-600 break-words">${escapeHtml(item.data.data.nama_bank)}</div>
-              </div>
+            <div class="mt-4 bg-red-50 border border-red-200 rounded-2xl p-3 text-sm text-red-600 font-semibold">
+              ❌ ${escapeHtml(item.error || "Data tidak valid / response tidak lengkap")}
             </div>
           `;
         }
-      } else {
-        detailHtml = `
-          <div class="mt-4 bg-red-50 border border-red-200 rounded-2xl p-3 text-sm text-red-600 font-semibold">
-            ❌ ${escapeHtml(item.error || "Data tidak valid / response tidak lengkap")}
+
+        return `
+          <div class="bg-white rounded-3xl border ${isSuccess ? 'border-emerald-200' : 'border-red-200'} p-5 shadow-sm animate-result">
+            <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+              <div class="flex items-center gap-3">
+                <div class="w-11 h-11 rounded-2xl flex items-center justify-center text-xl ${isSuccess ? 'bg-emerald-100' : 'bg-red-100'}">
+                  ${isSuccess ? '✅' : '❌'}
+                </div>
+                <div>
+                  <div class="text-xs uppercase tracking-wide text-slate-400 font-bold">Data #${index + 1}</div>
+                  <div class="text-base font-extrabold text-slate-800 break-all">${escapeHtml(label)}</div>
+                </div>
+              </div>
+              <div class="text-sm font-bold ${isSuccess ? 'text-emerald-600' : 'text-red-600'}">
+                ${isSuccess ? 'VALID' : 'TIDAK VALID'}
+              </div>
+            </div>
+            ${detailHtml}
           </div>
         `;
-      }
-  
-      return `
-        <div class="bg-white rounded-3xl border ${isSuccess ? 'border-emerald-200' : 'border-red-200'} p-5 shadow-sm animate-result">
-          <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
-            <div class="flex items-center gap-3">
-              <div class="w-11 h-11 rounded-2xl flex items-center justify-center text-xl ${isSuccess ? 'bg-emerald-100' : 'bg-red-100'}">
-                ${isSuccess ? '✅' : '❌'}
-              </div>
-              <div>
-                <div class="text-xs uppercase tracking-wide text-slate-400 font-bold">Data #${index + 1}</div>
-                <div class="text-base font-extrabold text-slate-800 break-all">${escapeHtml(label)}</div>
-              </div>
-            </div>
-            <div class="text-sm font-bold ${isSuccess ? 'text-emerald-600' : 'text-red-600'}">
-              ${isSuccess ? 'VALID' : 'TIDAK VALID'}
-            </div>
-          </div>
-          ${detailHtml}
+      }).join("");
+
+      resultBox.innerHTML = `
+        <div class="w-full space-y-4 max-h-[600px] overflow-y-auto custom-scroll pr-1">
+          ${cards}
         </div>
       `;
-    }).join("");
-  
-    resultBox.innerHTML = `
-      <div class="w-full space-y-4 max-h-[600px] overflow-y-auto custom-scroll pr-1">
-        ${cards}
-      </div>
-    `;
-  }
+    }
 
     function getBulkItems() {
       const mode = modeSelect.value;
@@ -482,8 +496,8 @@ Contoh ewallet:
         throw new Error("Data bulk masih kosong.");
       }
 
-      if (lines.length > 50) {
-        throw new Error("Maksimal 50 data per request.");
+      if (lines.length > MAX_TOTAL_BULK) {
+        throw new Error(`Maksimal ${MAX_TOTAL_BULK} data total.`);
       }
 
       if (mode === "ewallet") {
@@ -551,7 +565,7 @@ Contoh ewallet:
           }
 
           const res = await fetch(`/api/inquiry${query}`);
-          const data = await res.json();
+          const data = await safeParseResponse(res);
 
           if (!res.ok || !data || data.error) {
             renderError(data?.error || "Gagal cek data.");
@@ -562,35 +576,43 @@ Contoh ewallet:
           return;
         }
 
-        // BULK MODE
         const items = getBulkItems();
+        const batches = chunkArray(items, BATCH_SIZE);
+        const mergedResults = [];
 
-        renderLoading(`Sedang memproses ${items.length} data bulk...`);
+        for (let i = 0; i < batches.length; i++) {
+          renderLoading(`Memproses batch ${i + 1}/${batches.length} (${batches[i].length} data)...`);
 
-        const res = await fetch(`/api/inquiry`, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json"
-          },
-          body: JSON.stringify({
-            mode,
-            items
-          })
+          const res = await fetch(`/api/inquiry`, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json"
+            },
+            body: JSON.stringify({
+              mode,
+              items: batches[i]
+            })
+          });
+
+          const data = await safeParseResponse(res);
+
+          if (!res.ok || !data) {
+            throw new Error(data?.error || `Batch ${i + 1} gagal diproses.`);
+          }
+
+          if (data.error) {
+            throw new Error(data.error);
+          }
+
+          if (Array.isArray(data.results)) {
+            mergedResults.push(...data.results);
+          }
+        }
+
+        renderBulkResults(mode, {
+          success: true,
+          results: mergedResults
         });
-
-        const data = await res.json();
-
-        if (!res.ok || !data) {
-          renderError(data?.error || "Gagal memproses bulk.");
-          return;
-        }
-
-        if (data.error) {
-          renderError(data.error);
-          return;
-        }
-
-        renderBulkResults(mode, data);
 
       } catch (err) {
         renderError(err?.message || "Gagal memproses. Coba lagi nanti.");
