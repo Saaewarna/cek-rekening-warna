@@ -9,11 +9,22 @@ export default async function handler(req, res) {
     '93.185.162.116',
   ];
 
+  // Frontend total max 30, tapi frontend akan kirim per batch 10.
   const MAX_BULK = 10;
-  const CONCURRENCY = 3;
-  const FETCH_TIMEOUT_MS = 7000;
+
+  // Dibuat 1 biar paling aman terhadap rate limit / provider lemot.
+  const CONCURRENCY = 1;
+
+  // Timeout lebih panjang.
+  const FETCH_TIMEOUT_MS = 12000;
+
+  // Retry otomatis 1x kalau timeout / fetch gagal.
+  const MAX_RETRIES = 1;
 
   try {
+    // ==========================================
+    // 1. CEK IP
+    // ==========================================
     let clientIp =
       req.headers['x-forwarded-for'] ||
       req.socket?.remoteAddress ||
@@ -31,6 +42,9 @@ export default async function handler(req, res) {
       });
     }
 
+    // ==========================================
+    // 2. CEK API KEY
+    // ==========================================
     if (!process.env.RAPIDAPI_KEY) {
       console.error('[CRITICAL] RAPIDAPI_KEY belum disetting di Vercel!');
       return res.status(500).json({
@@ -39,6 +53,9 @@ export default async function handler(req, res) {
       });
     }
 
+    // ==========================================
+    // 3. HELPER
+    // ==========================================
     function detectIsValid(mode, data) {
       if (!data) return false;
 
@@ -61,7 +78,11 @@ export default async function handler(req, res) {
       return false;
     }
 
-    async function fetchSingleInquiry({ mode, id, provider, bank, rekening }) {
+    function sleep(ms) {
+      return new Promise((resolve) => setTimeout(resolve, ms));
+    }
+
+    function buildRequestConfig({ mode, id, provider, bank, rekening }) {
       const headers = {
         'x-rapidapi-key': process.env.RAPIDAPI_KEY,
         'Content-Type': 'application/json',
@@ -73,14 +94,17 @@ export default async function handler(req, res) {
       if (mode === 'ewallet') {
         if (!id || !provider) {
           return {
-            success: false,
-            is_valid: false,
-            error: 'Data e-wallet tidak lengkap.',
-            input: { id, provider },
+            ok: false,
+            result: {
+              success: false,
+              is_valid: false,
+              error: 'Data e-wallet tidak lengkap.',
+              input: { id, provider },
+            },
           };
         }
 
-        const p = provider.toLowerCase().trim();
+        const p = String(provider).toLowerCase().trim();
         const host = process.env.RAPIDAPI_HOST || 'cek-e-wallet.p.rapidapi.com';
         headers['x-rapidapi-host'] = host;
 
@@ -90,13 +114,25 @@ export default async function handler(req, res) {
           p === 'linkaja'
             ? `https://${host}/cekewallet/${encodeURIComponent(id)}/LINKAJA`
             : `https://${host}/cek_ewallet/${encodeURIComponent(id)}/${encodeURIComponent(p)}`;
-      } else if (mode === 'bank') {
+
+        return {
+          ok: true,
+          headers,
+          url,
+          input,
+        };
+      }
+
+      if (mode === 'bank') {
         if (!bank || !rekening) {
           return {
-            success: false,
-            is_valid: false,
-            error: 'Data bank tidak lengkap.',
-            input: { bank, rekening },
+            ok: false,
+            result: {
+              success: false,
+              is_valid: false,
+              error: 'Data bank tidak lengkap.',
+              input: { bank, rekening },
+            },
           };
         }
 
@@ -105,20 +141,33 @@ export default async function handler(req, res) {
         input = { bank, rekening };
 
         url = `https://${host}/check_bank_lq/${encodeURIComponent(bank)}/${encodeURIComponent(rekening)}`;
-      } else {
+
         return {
-          success: false,
-          is_valid: false,
-          error: 'Mode tidak valid.',
+          ok: true,
+          headers,
+          url,
           input,
         };
       }
 
+      return {
+        ok: false,
+        result: {
+          success: false,
+          is_valid: false,
+          error: 'Mode tidak valid.',
+          input: {},
+        },
+      };
+    }
+
+    async function doFetchOnce({ url, headers, mode, input }) {
       const controller = new AbortController();
       const timeout = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
 
       try {
         console.log(`[DEBUG] Fetching URL: ${url}`);
+
         const apiReq = await fetch(url, {
           headers,
           signal: controller.signal,
@@ -127,6 +176,7 @@ export default async function handler(req, res) {
         clearTimeout(timeout);
 
         const contentType = apiReq.headers.get('content-type') || '';
+
         if (!contentType.includes('application/json')) {
           const text = await apiReq.text();
           console.error('[API ERROR] Response bukan JSON:', text);
@@ -137,6 +187,7 @@ export default async function handler(req, res) {
             input,
             error: 'Provider API mengembalikan response non-JSON.',
             raw: text,
+            retryable: false,
           };
         }
 
@@ -144,12 +195,19 @@ export default async function handler(req, res) {
         const isValid = detectIsValid(mode, data);
 
         if (!apiReq.ok) {
+          const message =
+            data?.message ||
+            data?.error ||
+            'Gagal validasi dari pusat.';
+
+          // HTTP non-OK umumnya jangan dipaksa retry terus.
           return {
             success: false,
             is_valid: false,
             input,
-            error: data?.message || data?.error || 'Gagal validasi dari pusat.',
+            error: message,
             data,
+            retryable: false,
           };
         }
 
@@ -159,20 +217,80 @@ export default async function handler(req, res) {
           input,
           data,
           error: isValid ? null : 'Data tidak valid / response tidak lengkap',
+          retryable: false,
         };
       } catch (fetchError) {
         clearTimeout(timeout);
         console.error('[FETCH ERROR]', fetchError);
 
+        const isAbort =
+          fetchError?.name === 'AbortError' ||
+          String(fetchError?.message || '').toLowerCase().includes('abort');
+
         return {
           success: false,
           is_valid: false,
           input,
-          error: 'Koneksi ke server pusat timeout/gagal.',
+          error: isAbort
+            ? 'Koneksi ke server pusat timeout.'
+            : 'Koneksi ke server pusat gagal.',
+          retryable: true,
+          debug: {
+            name: fetchError?.name || 'UnknownError',
+            message: fetchError?.message || String(fetchError),
+          },
         };
       }
     }
 
+    async function fetchSingleInquiry({ mode, id, provider, bank, rekening }) {
+      const config = buildRequestConfig({ mode, id, provider, bank, rekening });
+
+      if (!config.ok) {
+        return config.result;
+      }
+
+      let lastResult = null;
+
+      for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+        const result = await doFetchOnce({
+          url: config.url,
+          headers: config.headers,
+          mode,
+          input: config.input,
+        });
+
+        lastResult = result;
+
+        if (result.success) {
+          return result;
+        }
+
+        // Retry hanya jika memang retryable dan masih ada jatah retry.
+        if (result.retryable && attempt < MAX_RETRIES) {
+          console.warn(
+            `[RETRY] Attempt ${attempt + 1} gagal untuk ${JSON.stringify(config.input)}. Retry lagi...`
+          );
+          await sleep(1200);
+          continue;
+        }
+
+        return result;
+      }
+
+      return (
+        lastResult || {
+          success: false,
+          is_valid: false,
+          input: config.input,
+          error: 'Unknown fetch error.',
+        }
+      );
+    }
+
+    // ==========================================
+    // 4. BULK MODE (POST)
+    // ==========================================
     if (req.method === 'POST') {
       const { mode, items } = req.body || {};
 
@@ -230,6 +348,9 @@ export default async function handler(req, res) {
       });
     }
 
+    // ==========================================
+    // 5. SINGLE MODE (GET)
+    // ==========================================
     const { mode, id, provider, bank, rekening } = req.query;
 
     const single = await fetchSingleInquiry({
