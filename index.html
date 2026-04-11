@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>WarnaGroup Cekrek Bulk</title>
+  <title>WarnaGroup Cekrek</title>
   <link rel="icon" type="image/png" href="https://images.icon-icons.com/2746/PNG/512/rainbow_icon_175988.png">
   <script src="https://cdn.tailwindcss.com"></script>
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -125,8 +125,8 @@
                 <div class="font-semibold text-slate-700 mb-1">Format bulk:</div>
                 <div id="formatHint">
                   - 1 baris = 1 data<br>
-                  - Maksimal 50 data total<br>
-                  - Akan diproses otomatis per batch
+                  - Maksimal 30 data total<br>
+                  - Diproses otomatis per batch
                 </div>
               </div>
             </div>
@@ -181,7 +181,7 @@
     const clearBtn = document.getElementById("clearBtn");
     const fillExampleBtn = document.getElementById("fillExampleBtn");
 
-    const MAX_TOTAL_BULK = 50;
+    const MAX_TOTAL_BULK = 30;
     const BATCH_SIZE = 10;
 
     function escapeHtml(value) {
