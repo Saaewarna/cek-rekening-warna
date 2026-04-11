@@ -264,6 +264,55 @@
       `;
     }
 
+    function renderProgress(current, total, text = "Sedang memproses...", successCount = 0, failedCount = 0) {
+      summaryBox.classList.add("hidden");
+      summaryBox.innerHTML = "";
+      exportXlsxBtn.classList.add("hidden");
+
+      const percent = total > 0 ? Math.round((current / total) * 100) : 0;
+
+      resultBox.innerHTML = `
+        <div class="w-full max-w-2xl mx-auto">
+          <div class="bg-white rounded-3xl border border-slate-200 p-6 shadow-sm animate-result">
+            <div class="flex items-center justify-between gap-4 mb-4">
+              <div>
+                <div class="text-sm font-bold text-slate-800">${escapeHtml(text)}</div>
+                <div class="text-xs text-slate-500 mt-1">Progress ${current} / ${total}</div>
+              </div>
+              <div class="text-2xl font-extrabold text-blue-600">${percent}%</div>
+            </div>
+
+            <div class="w-full h-4 bg-slate-100 rounded-full overflow-hidden border border-slate-200">
+              <div class="h-full bg-blue-600 rounded-full" style="width: ${percent}%"></div>
+            </div>
+
+            <div class="mt-4 grid grid-cols-5 gap-3 text-center">
+              <div class="bg-slate-50 rounded-2xl p-3 border border-slate-100">
+                <div class="text-[11px] uppercase font-bold text-slate-400">Diproses</div>
+                <div class="text-lg font-extrabold text-slate-800">${current}</div>
+              </div>
+              <div class="bg-slate-50 rounded-2xl p-3 border border-slate-100">
+                <div class="text-[11px] uppercase font-bold text-slate-400">Total</div>
+                <div class="text-lg font-extrabold text-slate-800">${total}</div>
+              </div>
+              <div class="bg-emerald-50 rounded-2xl p-3 border border-emerald-100">
+                <div class="text-[11px] uppercase font-bold text-emerald-500">Sukses</div>
+                <div class="text-lg font-extrabold text-emerald-700">${successCount}</div>
+              </div>
+              <div class="bg-red-50 rounded-2xl p-3 border border-red-100">
+                <div class="text-[11px] uppercase font-bold text-red-500">Gagal</div>
+                <div class="text-lg font-extrabold text-red-700">${failedCount}</div>
+              </div>
+              <div class="bg-slate-50 rounded-2xl p-3 border border-slate-100">
+                <div class="text-[11px] uppercase font-bold text-slate-400">Sisa</div>
+                <div class="text-lg font-extrabold text-slate-800">${Math.max(total - current, 0)}</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
     function renderError(message) {
       summaryBox.classList.add("hidden");
       summaryBox.innerHTML = "";
@@ -655,9 +704,14 @@
 
         const items = getBulkItems();
         const mergedResults = [];
+        let successLive = 0;
+        let failedLive = 0;
+
+        renderProgress(0, items.length, "Menyiapkan proses bulk...", successLive, failedLive);
+        await sleep(400);
 
         for (let i = 0; i < items.length; i++) {
-          renderLoading(`Memproses ${i + 1}/${items.length}...`);
+          renderProgress(i + 1, items.length, `Sedang cek data ke-${i + 1}...`, successLive, failedLive);
 
           let res;
           if (mode === "ewallet") {
@@ -670,13 +724,21 @@
 
           const data = await safeParseResponse(res);
 
-          mergedResults.push({
+          const row = {
             success: data?.success === true,
             is_valid: data?.is_valid === true,
             input: data?.input || items[i],
             data: data?.data || null,
             error: data?.error || null
-          });
+          };
+
+          mergedResults.push(row);
+
+          if (row.is_valid) {
+            successLive++;
+          } else {
+            failedLive++;
+          }
 
           if (i < items.length - 1) {
             await sleep(REQUEST_DELAY_MS);
