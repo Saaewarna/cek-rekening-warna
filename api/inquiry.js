@@ -10,7 +10,7 @@ export default async function handler(req, res) {
   ];
 
   const MAX_BULK = 10;
-  const CONCURRENCY = 5;
+  const CONCURRENCY = 3;
   const FETCH_TIMEOUT_MS = 7000;
 
   try {
