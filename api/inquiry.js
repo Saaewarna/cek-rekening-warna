@@ -17,13 +17,16 @@ export default async function handler(req, res) {
       req.socket?.remoteAddress ||
       '';
 
-    if (clientIp.includes(',')) clientIp = clientIp.split(',')[0].trim();
+    if (clientIp.includes(',')) {
+      clientIp = clientIp.split(',')[0].trim();
+    }
 
     console.log(`[DEBUG] Request masuk dari IP: ${clientIp}`);
 
     if (!ALLOWED_IPS.includes(clientIp)) {
       return res.status(403).json({
         success: false,
+        is_valid: false,
         error: `Akses ditolak, IP kamu (${clientIp}) belum di Whitelist.`,
         your_ip: clientIp,
       });
@@ -33,6 +36,7 @@ export default async function handler(req, res) {
       console.error('[CRITICAL] RAPIDAPI_KEY belum disetting di Vercel!');
       return res.status(500).json({
         success: false,
+        is_valid: false,
         error: 'Server Config Error: API Key belum dipasang di Vercel.',
       });
     }
@@ -88,7 +92,7 @@ export default async function handler(req, res) {
         success: false,
         is_valid: false,
         error: 'Mode tidak valid.',
-        input,
+        input: {},
       });
     }
 
@@ -119,58 +123,139 @@ export default async function handler(req, res) {
         });
       }
 
-      const data = await apiReq.json();
-
-      let isValid = false;
-      if (mode === 'ewallet') {
-        isValid =
-          data?.data?.status === 'SUCCESS' &&
-          !!data?.data?.name &&
-          !!data?.data?.account_number;
-      } else if (mode === 'bank') {
-        isValid =
-          data?.success === true &&
-          !!data?.data?.nama &&
-          !!data?.data?.no_rekening;
-      }
+      const raw = await apiReq.json();
 
       if (!apiReq.ok) {
         return res.status(apiReq.status).json({
           success: false,
           is_valid: false,
           input,
-          error: data?.message || data?.error || 'Gagal validasi dari pusat.',
-          data,
+          error: raw?.message || raw?.error || 'Gagal validasi dari pusat.',
+          raw,
         });
+      }
+
+      let normalized = null;
+      let isValid = false;
+
+      if (mode === 'ewallet') {
+        const d = raw?.data || raw || {};
+
+        normalized = {
+          nama:
+            d?.name ||
+            d?.nama ||
+            d?.account_name ||
+            d?.owner_name ||
+            '',
+          nomor:
+            d?.account_number ||
+            d?.id ||
+            d?.number ||
+            d?.phone ||
+            input.id ||
+            '',
+          provider:
+            d?.bank ||
+            d?.wallet ||
+            d?.provider ||
+            input.provider ||
+            '',
+          status:
+            d?.status ||
+            raw?.status ||
+            '',
+        };
+
+        isValid = Boolean(normalized.nama && normalized.nomor);
+      }
+
+      if (mode === 'bank') {
+        const d = raw?.data || raw || {};
+
+        normalized = {
+          nama:
+            d?.nama ||
+            d?.name ||
+            d?.account_name ||
+            d?.owner_name ||
+            '',
+          nomor:
+            d?.no_rekening ||
+            d?.account_number ||
+            d?.rekening ||
+            d?.number ||
+            input.rekening ||
+            '',
+          bank:
+            d?.nama_bank ||
+            d?.bank_name ||
+            d?.bank ||
+            input.bank ||
+            '',
+        };
+
+        isValid = Boolean(normalized.nama && normalized.nomor);
       }
 
       return res.status(200).json({
         success: true,
         is_valid: isValid,
         input,
-        data,
-        error: isValid ? null : 'Data tidak valid / response tidak lengkap',
+        normalized,
+        raw,
+        error: isValid ? null : 'Data validasi tidak cocok dengan format yang dikenali.',
       });
     } catch (fetchError) {
       clearTimeout(timeout);
 
+      const errorName = fetchError?.name || 'UnknownError';
+      const errorMessage = fetchError?.message || String(fetchError);
+      const lowerMessage = errorMessage.toLowerCase();
+
       const isAbort =
-        fetchError?.name === 'AbortError' ||
-        String(fetchError?.message || '').toLowerCase().includes('abort');
+        errorName === 'AbortError' || lowerMessage.includes('abort');
+
+      let friendlyError = 'Koneksi ke server pusat gagal.';
+
+      if (isAbort) {
+        friendlyError = 'Koneksi ke server pusat timeout.';
+      } else if (lowerMessage.includes('fetch failed')) {
+        friendlyError = 'Koneksi ke provider gagal (fetch failed).';
+      } else if (lowerMessage.includes('network')) {
+        friendlyError = 'Koneksi jaringan ke provider bermasalah.';
+      } else if (lowerMessage.includes('dns')) {
+        friendlyError = 'DNS provider gagal di-resolve.';
+      } else if (lowerMessage.includes('tls') || lowerMessage.includes('ssl')) {
+        friendlyError = 'Koneksi SSL/TLS ke provider gagal.';
+      } else if (lowerMessage.includes('socket')) {
+        friendlyError = 'Koneksi socket ke provider terputus.';
+      }
+
+      console.error('[FETCH ERROR DETAIL]', {
+        name: errorName,
+        message: errorMessage,
+        mode,
+        input,
+        url,
+      });
 
       return res.status(502).json({
         success: false,
         is_valid: false,
         input,
-        error: isAbort
-          ? 'Koneksi ke server pusat timeout.'
-          : 'Koneksi ke server pusat gagal.',
+        error: friendlyError,
+        debug: {
+          name: errorName,
+          message: errorMessage,
+        },
       });
     }
   } catch (err) {
     console.error('[SERVER ERROR]', err);
     return res.status(500).json({
       success: false,
+      is_valid: false,
       error: `Internal Error: ${err.message}`,
     });
   }
