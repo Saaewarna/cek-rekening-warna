@@ -409,7 +409,9 @@
     exportXlsxBtn.classList.add("hidden");
     lastBulkExportRows = [];
 
-    const status = data?.validation_status || "INVALID";
+    const status =
+      data?.validation_status ||
+      (data?.is_valid ? "VALID" : "INVALID");
     const normalized = data?.normalized || {};
 
     if (!data?.is_valid || !normalized?.nomor) {
@@ -732,100 +734,115 @@
     `;
   });
 
-  document.getElementById("paymentForm").addEventListener("submit", async (e) => {
-    e.preventDefault();
+document.getElementById("paymentForm").addEventListener("submit", async (e) => {
+  e.preventDefault();
 
-    const inputType = inputTypeSelect.value;
-    const mode = modeSelect.value;
-    const provider = document.getElementById("provider").value;
-    const bank = document.getElementById("bank").value;
+  const inputType = inputTypeSelect.value;
+  const mode = modeSelect.value;
+  const provider = document.getElementById("provider").value;
+  const bank = document.getElementById("bank").value;
 
-    try {
-      if (inputType === "single") {
-        const id = idInput.value.trim();
+  try {
+    if (inputType === "single") {
+      const id = idInput.value.trim();
 
-        if (!id) {
-          renderError("Masukkan datanya dulu ya.");
-          return;
-        }
-
-        renderLoading("Sedang memproses single check...");
-
-        let query = `?mode=${encodeURIComponent(mode)}`;
-        if (mode === "ewallet") {
-          query += `&id=${encodeURIComponent(id)}&provider=${encodeURIComponent(provider)}`;
-        } else {
-          query += `&bank=${encodeURIComponent(bank)}&rekening=${encodeURIComponent(id)}`;
-        }
-
-        const res = await fetch(`/api/inquiry${query}`);
-        const data = await safeParseResponse(res);
-
-        if (!res.ok || !data) {
-          renderError(data?.debug?.message
-            ? `${data?.error || "Gagal cek data."} (${data.debug.message})`
-            : (data?.error || "Gagal cek data."));
-          return;
-        }
-
-        renderSingleResult(mode, data);
+      if (!id) {
+        renderError("Masukkan datanya dulu ya.");
         return;
       }
 
-      const items = getBulkItems();
-      const mergedResults = [];
-      let validLive = 0;
-      let partialLive = 0;
-      let invalidLive = 0;
+      renderLoading("Sedang memproses single check...");
 
-      renderProgress(0, items.length, "Menyiapkan proses bulk...", validLive + partialLive, invalidLive);
-      await sleep(400);
-
-      for (let i = 0; i < items.length; i++) {
-        renderProgress(i + 1, items.length, `Sedang cek data ke-${i + 1}...`, validLive + partialLive, invalidLive);
-
-        let res;
-        if (mode === "ewallet") {
-          const query = `?mode=ewallet&id=${encodeURIComponent(items[i].id)}&provider=${encodeURIComponent(items[i].provider)}`;
-          res = await fetch(`/api/inquiry${query}`);
-        } else {
-          const query = `?mode=bank&bank=${encodeURIComponent(items[i].bank)}&rekening=${encodeURIComponent(items[i].rekening)}`;
-          res = await fetch(`/api/inquiry${query}`);
-        }
-
-        const data = await safeParseResponse(res);
-
-        const row = {
-          success: data?.success === true,
-          is_valid: data?.is_valid === true,
-          validation_status: data?.validation_status || (data?.is_valid ? "VALID" : "INVALID"),
-          input: data?.input || items[i],
-          normalized: data?.normalized || {},
-          raw: data?.raw || null,
-          error: data?.error || null
-        };
-
-        mergedResults.push(row);
-
-        if (row.validation_status === "VALID") validLive++;
-        else if (row.validation_status === "PARTIAL") partialLive++;
-        else invalidLive++;
-
-        if (i < items.length - 1) {
-          await sleep(REQUEST_DELAY_MS);
-        }
+      let query = `?mode=${encodeURIComponent(mode)}`;
+      if (mode === "ewallet") {
+        query += `&id=${encodeURIComponent(id)}&provider=${encodeURIComponent(provider)}`;
+      } else {
+        query += `&bank=${encodeURIComponent(bank)}&rekening=${encodeURIComponent(id)}`;
       }
 
-      renderBulkResults(mode, {
-        success: true,
-        results: mergedResults
-      });
+      const res = await fetch(`/api/inquiry${query}`);
+      const data = await safeParseResponse(res);
 
-    } catch (err) {
-      renderError(err?.message || "Gagal memproses. Coba lagi nanti.");
+      console.log("DEBUG SINGLE RESPONSE:", data);
+
+      if (!res.ok || !data) {
+        renderError(
+          data?.debug?.message
+            ? `${data?.error || "Gagal cek data."} (${data.debug.message})`
+            : (data?.error || "Gagal cek data.")
+        );
+        return;
+      }
+
+      renderSingleResult(mode, data);
+      return;
     }
-  });
 
+    // BULK MODE
+    const items = getBulkItems();
+    const mergedResults = [];
+    let validLive = 0;
+    let partialLive = 0;
+    let invalidLive = 0;
+
+    renderProgress(0, items.length, "Menyiapkan proses bulk...", validLive + partialLive, invalidLive);
+    await sleep(400);
+
+    for (let i = 0; i < items.length; i++) {
+      renderProgress(
+        i + 1,
+        items.length,
+        `Sedang cek data ke-${i + 1}...`,
+        validLive + partialLive,
+        invalidLive
+      );
+
+      let res;
+      if (mode === "ewallet") {
+        const query = `?mode=ewallet&id=${encodeURIComponent(items[i].id)}&provider=${encodeURIComponent(items[i].provider)}`;
+        res = await fetch(`/api/inquiry${query}`);
+      } else {
+        const query = `?mode=bank&bank=${encodeURIComponent(items[i].bank)}&rekening=${encodeURIComponent(items[i].rekening)}`;
+        res = await fetch(`/api/inquiry${query}`);
+      }
+
+      const data = await safeParseResponse(res);
+
+      const row = {
+        success: data?.success === true,
+        is_valid: data?.is_valid === true,
+        validation_status: data?.validation_status || (data?.is_valid ? "VALID" : "INVALID"),
+        input: data?.input || items[i],
+        normalized: data?.normalized || {},
+        raw: data?.raw || null,
+        error: data?.error || null
+      };
+
+      mergedResults.push(row);
+
+      if (row.validation_status === "VALID") {
+        validLive++;
+      } else if (row.validation_status === "PARTIAL") {
+        partialLive++;
+      } else {
+        invalidLive++;
+      }
+
+      if (i < items.length - 1) {
+        await sleep(REQUEST_DELAY_MS);
+      }
+    }
+
+    renderBulkResults(mode, {
+      success: true,
+      results: mergedResults
+    });
+
+  } catch (err) {
+    renderError(err?.message || "Gagal memproses. Coba lagi nanti.");
+  }
+});
+  
   updateModeUI();
   updateInputTypeUI();
 </script>
