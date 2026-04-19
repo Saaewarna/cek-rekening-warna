@@ -119,7 +119,7 @@ export default async function handler(req, res) {
           is_valid: false,
           input,
           error: 'Provider API mengembalikan response non-JSON.',
-          raw: text,
+          raw_text: text,
         });
       }
 
@@ -147,18 +147,21 @@ export default async function handler(req, res) {
             d?.nama ||
             d?.account_name ||
             d?.owner_name ||
+            d?.customer_name ||
             '',
           nomor:
             d?.account_number ||
             d?.id ||
             d?.number ||
             d?.phone ||
+            d?.hp ||
             input.id ||
             '',
           provider:
             d?.bank ||
             d?.wallet ||
             d?.provider ||
+            d?.channel ||
             input.provider ||
             '',
           status:
@@ -168,9 +171,7 @@ export default async function handler(req, res) {
         };
 
         isValid = Boolean(normalized.nama && normalized.nomor);
-      }
-
-      if (mode === 'bank') {
+      } else if (mode === 'bank') {
         const d = raw?.data || raw || {};
 
         normalized = {
@@ -179,6 +180,7 @@ export default async function handler(req, res) {
             d?.name ||
             d?.account_name ||
             d?.owner_name ||
+            d?.beneficiary_name ||
             '',
           nomor:
             d?.no_rekening ||
@@ -191,6 +193,7 @@ export default async function handler(req, res) {
             d?.nama_bank ||
             d?.bank_name ||
             d?.bank ||
+            d?.issuer_bank ||
             input.bank ||
             '',
         };
