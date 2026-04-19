@@ -1,101 +1,833 @@
-function renderSingleResult(mode, data) {
-  exportXlsxBtn.classList.add("hidden");
-  lastBulkExportRows = [];
 
-  const status = data?.validation_status || "INVALID";
-  const normalized = data?.normalized || {};
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>WarnaGroup Cekrek</title>
+  <link rel="icon" type="image/png" href="https://images.icon-icons.com/2746/PNG/512/rainbow_icon_175988.png">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 
-  if (!data?.is_valid || !normalized?.nomor) {
+  <style>
+    body { font-family: 'Plus Jakarta Sans', sans-serif; }
+    * { transition: all 0.2s ease-in-out; }
+    .glass {
+      background: rgba(255, 255, 255, 0.96);
+      backdrop-filter: blur(12px);
+    }
+    .custom-scroll::-webkit-scrollbar {
+      width: 8px;
+      height: 8px;
+    }
+    .custom-scroll::-webkit-scrollbar-thumb {
+      background: rgba(59, 130, 246, 0.25);
+      border-radius: 999px;
+    }
+    .custom-scroll::-webkit-scrollbar-track {
+      background: transparent;
+    }
+    @keyframes slideUp {
+      from { opacity: 0; transform: translateY(8px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    .animate-result {
+      animation: slideUp 0.35s ease-out forwards;
+    }
+  </style>
+</head>
+
+<body class="bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 min-h-screen p-4 md:p-8">
+  <div class="max-w-6xl mx-auto">
+    <div class="glass rounded-[32px] shadow-[0_20px_60px_rgba(8,_112,_184,_0.12)] border border-white/60 overflow-hidden">
+      <div class="grid lg:grid-cols-[420px_1fr] min-h-[720px]">
+        
+        <div class="p-6 md:p-8 border-b lg:border-b-0 lg:border-r border-slate-200/70">
+          <div class="mb-8">
+            <div class="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-blue-100 mb-4">
+              <span class="text-3xl">🔥</span>
+            </div>
+            <h1 class="text-3xl md:text-4xl font-extrabold tracking-tight text-slate-800">
+              WarnaGroup <span class="text-blue-600">Cekrek</span>
+            </h1>
+            <p class="text-slate-500 mt-2 text-sm font-medium">
+              Single & Bulk Validasi Rekening / E-Wallet
+            </p>
+          </div>
+
+          <form id="paymentForm" class="space-y-5">
+            <div>
+              <label class="block text-sm font-semibold text-slate-700 mb-1.5 ml-1">Jenis Input:</label>
+              <select id="inputType" class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-700 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none">
+                <option value="single">Single Check</option>
+                <option value="bulk">Bulk Check</option>
+              </select>
+            </div>
+
+            <div>
+              <label class="block text-sm font-semibold text-slate-700 mb-1.5 ml-1">Pilih Jenis Cek:</label>
+              <select id="mode" class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-700 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none">
+                <option value="ewallet">📱 E-Wallet</option>
+                <option value="bank">🏦 Rekening Bank</option>
+              </select>
+            </div>
+
+            <div id="providerWrapper">
+              <label class="block text-sm font-semibold text-slate-700 mb-1.5 ml-1">Provider:</label>
+              <select id="provider" class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-700 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none">
+                <option value="shopeepay">ShopeePay</option>
+                <option value="gopay">GoPay</option>
+                <option value="ovo">OVO</option>
+                <option value="dana">DANA</option>
+                <option value="linkaja">LinkAja</option>
+              </select>
+            </div>
+
+            <div id="bankWrapper" class="hidden">
+              <label class="block text-sm font-semibold text-slate-700 mb-1.5 ml-1">Bank:</label>
+              <select id="bank" class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-700 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none">
+                <option value="bank_bca">BCA</option>
+                <option value="bank_bni">BNI</option>
+                <option value="bank_bri">BRI</option>
+                <option value="bank_mandiri">Mandiri</option>
+                <option value="bank_danamon">Danamon</option>
+                <option value="bank_permata">Permata</option>
+                <option value="bank_btn">BTN</option>
+                <option value="bank_btpn">BTPN / Jenius</option>
+                <option value="bank_bsi">BSI Indonesia</option>
+                <option value="bank_digibank">Digibank</option>
+                <option value="bank_cimb_niaga">CIMB Niaga</option>
+                <option value="bank_dbs_indonesia">DBS Indonesia</option>
+              </select>
+            </div>
+
+            <div id="singleWrapper">
+              <label id="idLabel" class="block text-sm font-semibold text-slate-700 mb-1.5 ml-1">Nomor HP / ID:</label>
+              <input id="id" type="text" autocomplete="off"
+                class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-700 placeholder:text-slate-400 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+                placeholder="Masukkan nomor" />
+            </div>
+
+            <div id="bulkWrapper" class="hidden">
+              <div class="flex items-center justify-between mb-1.5">
+                <label id="bulkLabel" class="block text-sm font-semibold text-slate-700 ml-1">Data Bulk:</label>
+                <button type="button" id="fillExampleBtn" class="text-xs font-bold text-blue-600 hover:text-blue-700">
+                  Isi Contoh
+                </button>
+              </div>
+
+              <textarea id="bulkInput" rows="10"
+                class="custom-scroll w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-700 placeholder:text-slate-400 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none resize-none"
+                placeholder="Contoh:
+081234567890
+081298765432"></textarea>
+
+              <div class="mt-2 text-xs text-slate-500 leading-5 bg-slate-50 rounded-xl p-3 border border-slate-200">
+                <div class="font-semibold text-slate-700 mb-1">Format bulk:</div>
+                <div id="formatHint">
+                  - 1 baris = 1 data<br>
+                  - Maksimal 30 data total<br>
+                  - Diproses satu per satu
+                </div>
+              </div>
+
+              <div class="mt-3 bg-amber-50 border border-amber-200 text-amber-700 rounded-xl px-3 py-2 text-xs font-semibold">
+                Limit provider: 30 request/menit. Sistem bulk dijalankan satu per satu dengan jeda 2 detik.
+              </div>
+            </div>
+
+            <div class="grid grid-cols-2 gap-3">
+              <button type="submit" class="group relative w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 rounded-2xl shadow-lg shadow-blue-200 active:scale-[0.98] overflow-hidden">
+                <span class="relative z-10">Cek Sekarang</span>
+              </button>
+
+              <button type="button" id="clearBtn" class="w-full bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold py-4 rounded-2xl border border-slate-200 active:scale-[0.98]">
+                Reset
+              </button>
+            </div>
+          </form>
+        </div>
+
+        <div class="p-6 md:p-8 bg-white/50">
+          <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-3 mb-6">
+            <div>
+              <h2 class="text-2xl font-extrabold text-slate-800">Hasil Validasi</h2>
+              <p class="text-sm text-slate-500">Semua hasil cek akan muncul di sini.</p>
+            </div>
+
+            <div class="flex flex-col md:flex-row md:items-center gap-3">
+              <div id="summaryBox" class="hidden flex flex-wrap gap-2"></div>
+
+              <button
+                type="button"
+                id="exportXlsxBtn"
+                class="hidden px-4 py-2 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-bold shadow-lg shadow-emerald-200"
+              >
+                Export XLSX
+              </button>
+            </div>
+          </div>
+
+          <div id="resultBox" class="min-h-[500px] rounded-3xl bg-slate-50 border border-dashed border-slate-200 p-4 md:p-5 flex items-center justify-center">
+            <div class="text-center">
+              <div class="text-5xl mb-3">🔍</div>
+              <p class="text-slate-400 text-sm italic">Masukkan datanya dulu bro.</p>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+<script>
+  const modeSelect = document.getElementById("mode");
+  const inputTypeSelect = document.getElementById("inputType");
+  const providerWrapper = document.getElementById("providerWrapper");
+  const bankWrapper = document.getElementById("bankWrapper");
+  const idLabel = document.getElementById("idLabel");
+  const singleWrapper = document.getElementById("singleWrapper");
+  const bulkWrapper = document.getElementById("bulkWrapper");
+  const bulkLabel = document.getElementById("bulkLabel");
+  const formatHint = document.getElementById("formatHint");
+  const idInput = document.getElementById("id");
+  const bulkInput = document.getElementById("bulkInput");
+  const resultBox = document.getElementById("resultBox");
+  const summaryBox = document.getElementById("summaryBox");
+  const clearBtn = document.getElementById("clearBtn");
+  const fillExampleBtn = document.getElementById("fillExampleBtn");
+  const exportXlsxBtn = document.getElementById("exportXlsxBtn");
+
+  const MAX_TOTAL_BULK = 30;
+  const REQUEST_DELAY_MS = 2000;
+  let lastBulkExportRows = [];
+
+  function escapeHtml(value) {
+    return String(value ?? "")
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#039;");
+  }
+
+  function sleep(ms) {
+    return new Promise(resolve => setTimeout(resolve, ms));
+  }
+
+  function updateModeUI() {
+    const isEwallet = modeSelect.value === "ewallet";
+    providerWrapper.classList.toggle("hidden", !isEwallet);
+    bankWrapper.classList.toggle("hidden", isEwallet);
+
+    idLabel.textContent = isEwallet ? "Nomor HP / ID:" : "Nomor Rekening:";
+    bulkLabel.textContent = isEwallet ? "Data Bulk E-Wallet:" : "Data Bulk Rekening:";
+
+    if (isEwallet) {
+      formatHint.innerHTML = `
+        - 1 baris = 1 nomor HP / ID<br>
+        - Provider mengikuti dropdown di atas<br>
+        - Maksimal ${MAX_TOTAL_BULK} data total
+      `;
+      bulkInput.placeholder = `Contoh:
+081234567890
+081298765432
+089876543210`;
+    } else {
+      formatHint.innerHTML = `
+        - 1 baris = 1 nomor rekening<br>
+        - Bank mengikuti dropdown di atas<br>
+        - Maksimal ${MAX_TOTAL_BULK} data total
+      `;
+      bulkInput.placeholder = `Contoh:
+1234567890
+9988776655
+1122334455`;
+    }
+  }
+
+  function updateInputTypeUI() {
+    const isBulk = inputTypeSelect.value === "bulk";
+    singleWrapper.classList.toggle("hidden", isBulk);
+    bulkWrapper.classList.toggle("hidden", !isBulk);
+  }
+
+  function renderLoading(text = "Sedang memproses...") {
+    summaryBox.classList.add("hidden");
+    summaryBox.innerHTML = "";
+    exportXlsxBtn.classList.add("hidden");
+    resultBox.innerHTML = `
+      <div class="flex flex-col items-center gap-3 text-center">
+        <div class="w-10 h-10 border-4 border-blue-600/20 border-t-blue-600 rounded-full animate-spin"></div>
+        <p class="text-blue-500 text-sm font-semibold">${escapeHtml(text)}</p>
+      </div>
+    `;
+  }
+
+  function renderProgress(current, total, text = "Sedang memproses...", successCount = 0, failedCount = 0) {
+    summaryBox.classList.add("hidden");
+    summaryBox.innerHTML = "";
+    exportXlsxBtn.classList.add("hidden");
+
+    const percent = total > 0 ? Math.round((current / total) * 100) : 0;
+
+    resultBox.innerHTML = `
+      <div class="w-full max-w-2xl mx-auto">
+        <div class="bg-white rounded-3xl border border-slate-200 p-6 shadow-sm animate-result">
+          <div class="flex items-center justify-between gap-4 mb-4">
+            <div>
+              <div class="text-sm font-bold text-slate-800">${escapeHtml(text)}</div>
+              <div class="text-xs text-slate-500 mt-1">Progress ${current} / ${total}</div>
+            </div>
+            <div class="text-2xl font-extrabold text-blue-600">${percent}%</div>
+          </div>
+
+          <div class="w-full h-4 bg-slate-100 rounded-full overflow-hidden border border-slate-200">
+            <div class="h-full bg-blue-600 rounded-full" style="width: ${percent}%"></div>
+          </div>
+
+          <div class="mt-4 grid grid-cols-5 gap-3 text-center">
+            <div class="bg-slate-50 rounded-2xl p-3 border border-slate-100">
+              <div class="text-[11px] uppercase font-bold text-slate-400">Diproses</div>
+              <div class="text-lg font-extrabold text-slate-800">${current}</div>
+            </div>
+            <div class="bg-slate-50 rounded-2xl p-3 border border-slate-100">
+              <div class="text-[11px] uppercase font-bold text-slate-400">Total</div>
+              <div class="text-lg font-extrabold text-slate-800">${total}</div>
+            </div>
+            <div class="bg-emerald-50 rounded-2xl p-3 border border-emerald-100">
+              <div class="text-[11px] uppercase font-bold text-emerald-500">Sukses</div>
+              <div class="text-lg font-extrabold text-emerald-700">${successCount}</div>
+            </div>
+            <div class="bg-red-50 rounded-2xl p-3 border border-red-100">
+              <div class="text-[11px] uppercase font-bold text-red-500">Gagal</div>
+              <div class="text-lg font-extrabold text-red-700">${failedCount}</div>
+            </div>
+            <div class="bg-slate-50 rounded-2xl p-3 border border-slate-100">
+              <div class="text-[11px] uppercase font-bold text-slate-400">Sisa</div>
+              <div class="text-lg font-extrabold text-slate-800">${Math.max(total - current, 0)}</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
+  function renderError(message) {
+    summaryBox.classList.add("hidden");
+    summaryBox.innerHTML = "";
+    exportXlsxBtn.classList.add("hidden");
+    lastBulkExportRows = [];
     resultBox.innerHTML = `
       <div class="w-full h-full flex items-center justify-center">
         <div class="bg-red-50 border border-red-200 text-red-600 rounded-2xl px-5 py-4 text-center font-semibold animate-result">
-          ❌ ${escapeHtml(data?.error || "Tidak ditemukan atau tidak valid.")}
-        </div>
-      </div>
-    `;
-    return;
-  }
-
-  const badge =
-    status === "VALID"
-      ? `<span class="px-3 py-1 rounded-full bg-emerald-100 text-emerald-700 text-xs font-bold">VALID</span>`
-      : `<span class="px-3 py-1 rounded-full bg-amber-100 text-amber-700 text-xs font-bold">PARTIAL</span>`;
-
-  const titleText =
-    status === "VALID" ? "Data Valid" : "Data Ditemukan";
-
-  const subtitleText =
-    status === "VALID"
-      ? "Data cocok dan lengkap"
-      : "Nomor ditemukan, tapi nama tidak lengkap dari provider";
-
-  let html = "";
-
-  if (mode === "ewallet") {
-    html = `
-      <div class="w-full max-w-xl mx-auto bg-white rounded-3xl border border-slate-200 p-6 shadow-sm animate-result">
-        <div class="flex items-center justify-between gap-3 mb-5">
-          <div class="flex items-center gap-3">
-            <div class="w-12 h-12 rounded-2xl ${status === "VALID" ? "bg-emerald-100" : "bg-amber-100"} flex items-center justify-center text-2xl">
-              ${status === "VALID" ? "✅" : "⚠️"}
-            </div>
-            <div>
-              <h3 class="font-extrabold text-slate-800 text-lg">${titleText}</h3>
-              <p class="text-sm text-slate-500">${subtitleText}</p>
-            </div>
-          </div>
-          ${badge}
-        </div>
-
-        <div class="space-y-3">
-          <div class="flex justify-between gap-4 border-b border-slate-100 pb-3">
-            <span class="text-xs uppercase font-bold text-slate-400">Nama</span>
-            <span class="text-slate-800 font-bold text-right">${escapeHtml(normalized.nama || "-")}</span>
-          </div>
-          <div class="flex justify-between gap-4 border-b border-slate-100 pb-3">
-            <span class="text-xs uppercase font-bold text-slate-400">ID</span>
-            <span class="text-slate-600 text-right">${escapeHtml(normalized.nomor || "-")}</span>
-          </div>
-          <div class="flex justify-between gap-4">
-            <span class="text-xs uppercase font-bold text-slate-400">Wallet</span>
-            <span class="text-blue-600 font-bold text-sm uppercase text-right">${escapeHtml(normalized.provider || "-")}</span>
-          </div>
-        </div>
-      </div>
-    `;
-  } else {
-    html = `
-      <div class="w-full max-w-xl mx-auto bg-white rounded-3xl border border-slate-200 p-6 shadow-sm animate-result">
-        <div class="flex items-center justify-between gap-3 mb-5">
-          <div class="flex items-center gap-3">
-            <div class="w-12 h-12 rounded-2xl ${status === "VALID" ? "bg-emerald-100" : "bg-amber-100"} flex items-center justify-center text-2xl">
-              ${status === "VALID" ? "✅" : "⚠️"}
-            </div>
-            <div>
-              <h3 class="font-extrabold text-slate-800 text-lg">${titleText}</h3>
-              <p class="text-sm text-slate-500">${subtitleText}</p>
-            </div>
-          </div>
-          ${badge}
-        </div>
-
-        <div class="space-y-3">
-          <div class="flex justify-between gap-4 border-b border-slate-100 pb-3">
-            <span class="text-xs uppercase font-bold text-slate-400">Nama</span>
-            <span class="text-slate-800 font-bold text-right">${escapeHtml(normalized.nama || "-")}</span>
-          </div>
-          <div class="flex justify-between gap-4 border-b border-slate-100 pb-3">
-            <span class="text-xs uppercase font-bold text-slate-400">Rekening</span>
-            <span class="text-slate-600 text-right">${escapeHtml(normalized.nomor || "-")}</span>
-          </div>
-          <div class="flex justify-between gap-4">
-            <span class="text-xs uppercase font-bold text-slate-400">Bank</span>
-            <span class="text-blue-600 font-bold text-sm uppercase text-right">${escapeHtml(normalized.bank || "-")}</span>
-          </div>
+          ❌ ${escapeHtml(message)}
         </div>
       </div>
     `;
   }
 
-  resultBox.innerHTML = html;
-}
+  async function safeParseResponse(res) {
+    const contentType = res.headers.get("content-type") || "";
+    const rawText = await res.text();
+
+    if (contentType.includes("application/json")) {
+      try {
+        return JSON.parse(rawText);
+      } catch {
+        throw new Error("Response JSON rusak / tidak valid.");
+      }
+    }
+
+    throw new Error(rawText || `HTTP ${res.status} ${res.statusText}`);
+  }
+
+  function formatDateTimeForFilename() {
+    const now = new Date();
+    const pad = (n) => String(n).padStart(2, "0");
+    return `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}_${pad(now.getHours())}-${pad(now.getMinutes())}-${pad(now.getSeconds())}`;
+  }
+
+  function getValidationStatus(item) {
+    if (!item) return "INVALID";
+    if (item.validation_status) return item.validation_status;
+    if (item.is_valid) return "VALID";
+    return "INVALID";
+  }
+
+  function isRealValidResult(item) {
+    const status = getValidationStatus(item);
+    return status === "VALID" || status === "PARTIAL";
+  }
+
+  function buildExportRows(mode, results) {
+    return results.map((item, index) => {
+      const status = getValidationStatus(item);
+      const normalized = item?.normalized || {};
+
+      if (mode === "ewallet") {
+        return {
+          No: index + 1,
+          Status: status,
+          Provider: item?.input?.provider || normalized.provider || "",
+          Nomor: normalized.nomor || item?.input?.id || "",
+          Nama: normalized.nama || "",
+          Wallet: normalized.provider || "",
+          Error: status === "INVALID" ? (item?.error || "Data tidak valid") : ""
+        };
+      }
+
+      return {
+        No: index + 1,
+        Status: status,
+        Bank: normalized.bank || item?.input?.bank || "",
+        Rekening_Input: item?.input?.rekening || "",
+        No_Rekening_Hasil: normalized.nomor || "",
+        Nama: normalized.nama || "",
+        Nama_Bank: normalized.bank || "",
+        Error: status === "INVALID" ? (item?.error || "Data tidak valid") : ""
+      };
+    });
+  }
+
+  function exportRowsToXlsx(rows, mode) {
+    if (!rows.length) {
+      renderError("Belum ada hasil bulk untuk diexport.");
+      return;
+    }
+
+    const worksheet = XLSX.utils.json_to_sheet(rows);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Hasil Validasi");
+
+    const filename = `hasil-validasi-${mode}-${formatDateTimeForFilename()}.xlsx`;
+    XLSX.writeFile(workbook, filename);
+  }
+
+  function renderSingleResult(mode, data) {
+    exportXlsxBtn.classList.add("hidden");
+    lastBulkExportRows = [];
+
+    const status = data?.validation_status || "INVALID";
+    const normalized = data?.normalized || {};
+
+    if (!data?.is_valid || !normalized?.nomor) {
+      resultBox.innerHTML = `
+        <div class="w-full h-full flex items-center justify-center">
+          <div class="bg-red-50 border border-red-200 text-red-600 rounded-2xl px-5 py-4 text-center font-semibold animate-result">
+            ❌ ${escapeHtml(data?.error || "Tidak ditemukan atau tidak valid.")}
+          </div>
+        </div>
+      `;
+      return;
+    }
+
+    const badge =
+      status === "VALID"
+        ? `<span class="px-3 py-1 rounded-full bg-emerald-100 text-emerald-700 text-xs font-bold">VALID</span>`
+        : `<span class="px-3 py-1 rounded-full bg-amber-100 text-amber-700 text-xs font-bold">PARTIAL</span>`;
+
+    const titleText =
+      status === "VALID" ? "Data Valid" : "Data Ditemukan";
+
+    const subtitleText =
+      status === "VALID"
+        ? "Data cocok dan lengkap"
+        : "Nomor ditemukan, tapi nama tidak lengkap dari provider";
+
+    let html = "";
+
+    if (mode === "ewallet") {
+      html = `
+        <div class="w-full max-w-xl mx-auto bg-white rounded-3xl border border-slate-200 p-6 shadow-sm animate-result">
+          <div class="flex items-center justify-between gap-3 mb-5">
+            <div class="flex items-center gap-3">
+              <div class="w-12 h-12 rounded-2xl ${status === "VALID" ? "bg-emerald-100" : "bg-amber-100"} flex items-center justify-center text-2xl">
+                ${status === "VALID" ? "✅" : "⚠️"}
+              </div>
+              <div>
+                <h3 class="font-extrabold text-slate-800 text-lg">${titleText}</h3>
+                <p class="text-sm text-slate-500">${subtitleText}</p>
+              </div>
+            </div>
+            ${badge}
+          </div>
+
+          <div class="space-y-3">
+            <div class="flex justify-between gap-4 border-b border-slate-100 pb-3">
+              <span class="text-xs uppercase font-bold text-slate-400">Nama</span>
+              <span class="text-slate-800 font-bold text-right">${escapeHtml(normalized.nama || "-")}</span>
+            </div>
+            <div class="flex justify-between gap-4 border-b border-slate-100 pb-3">
+              <span class="text-xs uppercase font-bold text-slate-400">ID</span>
+              <span class="text-slate-600 text-right">${escapeHtml(normalized.nomor || "-")}</span>
+            </div>
+            <div class="flex justify-between gap-4">
+              <span class="text-xs uppercase font-bold text-slate-400">Wallet</span>
+              <span class="text-blue-600 font-bold text-sm uppercase text-right">${escapeHtml(normalized.provider || "-")}</span>
+            </div>
+          </div>
+        </div>
+      `;
+    } else {
+      html = `
+        <div class="w-full max-w-xl mx-auto bg-white rounded-3xl border border-slate-200 p-6 shadow-sm animate-result">
+          <div class="flex items-center justify-between gap-3 mb-5">
+            <div class="flex items-center gap-3">
+              <div class="w-12 h-12 rounded-2xl ${status === "VALID" ? "bg-emerald-100" : "bg-amber-100"} flex items-center justify-center text-2xl">
+                ${status === "VALID" ? "✅" : "⚠️"}
+              </div>
+              <div>
+                <h3 class="font-extrabold text-slate-800 text-lg">${titleText}</h3>
+                <p class="text-sm text-slate-500">${subtitleText}</p>
+              </div>
+            </div>
+            ${badge}
+          </div>
+
+          <div class="space-y-3">
+            <div class="flex justify-between gap-4 border-b border-slate-100 pb-3">
+              <span class="text-xs uppercase font-bold text-slate-400">Nama</span>
+              <span class="text-slate-800 font-bold text-right">${escapeHtml(normalized.nama || "-")}</span>
+            </div>
+            <div class="flex justify-between gap-4 border-b border-slate-100 pb-3">
+              <span class="text-xs uppercase font-bold text-slate-400">Rekening</span>
+              <span class="text-slate-600 text-right">${escapeHtml(normalized.nomor || "-")}</span>
+            </div>
+            <div class="flex justify-between gap-4">
+              <span class="text-xs uppercase font-bold text-slate-400">Bank</span>
+              <span class="text-blue-600 font-bold text-sm uppercase text-right">${escapeHtml(normalized.bank || "-")}</span>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    resultBox.innerHTML = html;
+  }
+
+  function getBulkItemLabel(mode, input, normalized = {}) {
+    return mode === "ewallet"
+      ? (normalized.nomor || input?.id || "-")
+      : (normalized.nomor || input?.rekening || "-");
+  }
+
+  function renderBulkSummary(total, validCount, partialCount, invalidCount) {
+    summaryBox.classList.remove("hidden");
+    summaryBox.innerHTML = `
+      <div class="px-4 py-2 rounded-2xl bg-slate-100 text-slate-700 text-sm font-bold border border-slate-200">
+        Total: ${total}
+      </div>
+      <div class="px-4 py-2 rounded-2xl bg-emerald-100 text-emerald-700 text-sm font-bold border border-emerald-200">
+        Valid: ${validCount}
+      </div>
+      <div class="px-4 py-2 rounded-2xl bg-amber-100 text-amber-700 text-sm font-bold border border-amber-200">
+        Partial: ${partialCount}
+      </div>
+      <div class="px-4 py-2 rounded-2xl bg-red-100 text-red-700 text-sm font-bold border border-red-200">
+        Invalid: ${invalidCount}
+      </div>
+    `;
+  }
+
+  function renderBulkResults(mode, payload) {
+    const results = Array.isArray(payload.results) ? payload.results : [];
+
+    let validCount = 0;
+    let partialCount = 0;
+    let invalidCount = 0;
+
+    for (const item of results) {
+      const status = getValidationStatus(item);
+      if (status === "VALID") validCount++;
+      else if (status === "PARTIAL") partialCount++;
+      else invalidCount++;
+    }
+
+    lastBulkExportRows = buildExportRows(mode, results);
+    exportXlsxBtn.classList.toggle("hidden", results.length === 0);
+    exportXlsxBtn.onclick = () => exportRowsToXlsx(lastBulkExportRows, mode);
+
+    renderBulkSummary(results.length, validCount, partialCount, invalidCount);
+
+    if (!results.length) {
+      resultBox.innerHTML = `
+        <div class="w-full h-full flex items-center justify-center">
+          <div class="bg-amber-50 border border-amber-200 text-amber-700 rounded-2xl px-5 py-4 text-center font-semibold animate-result">
+            ⚠️ Tidak ada hasil untuk ditampilkan.
+          </div>
+        </div>
+      `;
+      return;
+    }
+
+    const cards = results.map((item, index) => {
+      const status = getValidationStatus(item);
+      const normalized = item?.normalized || {};
+      const label = getBulkItemLabel(mode, item.input, normalized);
+
+      const borderClass =
+        status === "VALID"
+          ? "border-emerald-200"
+          : status === "PARTIAL"
+          ? "border-amber-200"
+          : "border-red-200";
+
+      const badgeClass =
+        status === "VALID"
+          ? "text-emerald-600"
+          : status === "PARTIAL"
+          ? "text-amber-600"
+          : "text-red-600";
+
+      const iconBgClass =
+        status === "VALID"
+          ? "bg-emerald-100"
+          : status === "PARTIAL"
+          ? "bg-amber-100"
+          : "bg-red-100";
+
+      const icon =
+        status === "VALID"
+          ? "✅"
+          : status === "PARTIAL"
+          ? "⚠️"
+          : "❌";
+
+      let detailHtml = "";
+
+      if (status === "VALID" || status === "PARTIAL") {
+        if (mode === "ewallet") {
+          detailHtml = `
+            <div class="grid md:grid-cols-3 gap-3 mt-4">
+              <div class="bg-slate-50 rounded-2xl p-3 border border-slate-100">
+                <div class="text-[11px] uppercase font-bold text-slate-400 mb-1">Nama</div>
+                <div class="font-bold text-slate-800 break-words">${escapeHtml(normalized.nama || "-")}</div>
+              </div>
+              <div class="bg-slate-50 rounded-2xl p-3 border border-slate-100">
+                <div class="text-[11px] uppercase font-bold text-slate-400 mb-1">ID</div>
+                <div class="font-medium text-slate-700 break-words">${escapeHtml(normalized.nomor || "-")}</div>
+              </div>
+              <div class="bg-slate-50 rounded-2xl p-3 border border-slate-100">
+                <div class="text-[11px] uppercase font-bold text-slate-400 mb-1">Wallet</div>
+                <div class="font-bold text-blue-600 break-words">${escapeHtml(normalized.provider || "-")}</div>
+              </div>
+            </div>
+          `;
+        } else {
+          detailHtml = `
+            <div class="grid md:grid-cols-3 gap-3 mt-4">
+              <div class="bg-slate-50 rounded-2xl p-3 border border-slate-100">
+                <div class="text-[11px] uppercase font-bold text-slate-400 mb-1">Nama</div>
+                <div class="font-bold text-slate-800 break-words">${escapeHtml(normalized.nama || "-")}</div>
+              </div>
+              <div class="bg-slate-50 rounded-2xl p-3 border border-slate-100">
+                <div class="text-[11px] uppercase font-bold text-slate-400 mb-1">Rekening</div>
+                <div class="font-medium text-slate-700 break-words">${escapeHtml(normalized.nomor || "-")}</div>
+              </div>
+              <div class="bg-slate-50 rounded-2xl p-3 border border-slate-100">
+                <div class="text-[11px] uppercase font-bold text-slate-400 mb-1">Bank</div>
+                <div class="font-bold text-blue-600 break-words">${escapeHtml(normalized.bank || "-")}</div>
+              </div>
+            </div>
+          `;
+        }
+
+        if (status === "PARTIAL") {
+          detailHtml += `
+            <div class="mt-4 bg-amber-50 border border-amber-200 rounded-2xl p-3 text-sm text-amber-700 font-semibold">
+              ⚠️ Nomor ditemukan, tapi nama tidak lengkap dari provider.
+            </div>
+          `;
+        }
+      } else {
+        detailHtml = `
+          <div class="mt-4 bg-red-50 border border-red-200 rounded-2xl p-3 text-sm text-red-600 font-semibold">
+            ❌ ${escapeHtml(item?.error || "Data tidak valid / response tidak lengkap")}
+          </div>
+        `;
+      }
+
+      return `
+        <div class="bg-white rounded-3xl border ${borderClass} p-5 shadow-sm animate-result">
+          <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+            <div class="flex items-center gap-3">
+              <div class="w-11 h-11 rounded-2xl flex items-center justify-center text-xl ${iconBgClass}">
+                ${icon}
+              </div>
+              <div>
+                <div class="text-xs uppercase tracking-wide text-slate-400 font-bold">Data #${index + 1}</div>
+                <div class="text-base font-extrabold text-slate-800 break-all">${escapeHtml(label)}</div>
+              </div>
+            </div>
+            <div class="text-sm font-bold ${badgeClass}">
+              ${status}
+            </div>
+          </div>
+          ${detailHtml}
+        </div>
+      `;
+    }).join("");
+
+    resultBox.innerHTML = `
+      <div class="w-full space-y-4 max-h-[600px] overflow-y-auto custom-scroll pr-1">
+        ${cards}
+      </div>
+    `;
+  }
+
+  function getBulkItems() {
+    const mode = modeSelect.value;
+    const lines = bulkInput.value
+      .split("\n")
+      .map(line => line.trim())
+      .filter(Boolean);
+
+    if (!lines.length) {
+      throw new Error("Data bulk masih kosong.");
+    }
+
+    if (lines.length > MAX_TOTAL_BULK) {
+      throw new Error(`Maksimal ${MAX_TOTAL_BULK} data total.`);
+    }
+
+    if (mode === "ewallet") {
+      const provider = document.getElementById("provider").value;
+      return lines.map(id => ({ id, provider }));
+    }
+
+    const bank = document.getElementById("bank").value;
+    return lines.map(rekening => ({ bank, rekening }));
+  }
+
+  modeSelect.addEventListener("change", updateModeUI);
+  inputTypeSelect.addEventListener("change", updateInputTypeUI);
+
+  fillExampleBtn.addEventListener("click", () => {
+    if (modeSelect.value === "ewallet") {
+      bulkInput.value = `081234567890
+081298765432
+089876543210`;
+    } else {
+      bulkInput.value = `1234567890
+9988776655
+1122334455`;
+    }
+  });
+
+  clearBtn.addEventListener("click", () => {
+    document.getElementById("paymentForm").reset();
+    updateModeUI();
+    updateInputTypeUI();
+    summaryBox.classList.add("hidden");
+    summaryBox.innerHTML = "";
+    exportXlsxBtn.classList.add("hidden");
+    lastBulkExportRows = [];
+    resultBox.innerHTML = `
+      <div class="text-center">
+        <div class="text-5xl mb-3">🔍</div>
+        <p class="text-slate-400 text-sm italic">Masukkan datanya dulu bro.</p>
+      </div>
+    `;
+  });
+
+  document.getElementById("paymentForm").addEventListener("submit", async (e) => {
+    e.preventDefault();
+
+    const inputType = inputTypeSelect.value;
+    const mode = modeSelect.value;
+    const provider = document.getElementById("provider").value;
+    const bank = document.getElementById("bank").value;
+
+    try {
+      if (inputType === "single") {
+        const id = idInput.value.trim();
+
+        if (!id) {
+          renderError("Masukkan datanya dulu ya.");
+          return;
+        }
+
+        renderLoading("Sedang memproses single check...");
+
+        let query = `?mode=${encodeURIComponent(mode)}`;
+        if (mode === "ewallet") {
+          query += `&id=${encodeURIComponent(id)}&provider=${encodeURIComponent(provider)}`;
+        } else {
+          query += `&bank=${encodeURIComponent(bank)}&rekening=${encodeURIComponent(id)}`;
+        }
+
+        const res = await fetch(`/api/inquiry${query}`);
+        const data = await safeParseResponse(res);
+
+        if (!res.ok || !data) {
+          renderError(data?.debug?.message
+            ? `${data?.error || "Gagal cek data."} (${data.debug.message})`
+            : (data?.error || "Gagal cek data."));
+          return;
+        }
+
+        renderSingleResult(mode, data);
+        return;
+      }
+
+      const items = getBulkItems();
+      const mergedResults = [];
+      let validLive = 0;
+      let partialLive = 0;
+      let invalidLive = 0;
+
+      renderProgress(0, items.length, "Menyiapkan proses bulk...", validLive + partialLive, invalidLive);
+      await sleep(400);
+
+      for (let i = 0; i < items.length; i++) {
+        renderProgress(i + 1, items.length, `Sedang cek data ke-${i + 1}...`, validLive + partialLive, invalidLive);
+
+        let res;
+        if (mode === "ewallet") {
+          const query = `?mode=ewallet&id=${encodeURIComponent(items[i].id)}&provider=${encodeURIComponent(items[i].provider)}`;
+          res = await fetch(`/api/inquiry${query}`);
+        } else {
+          const query = `?mode=bank&bank=${encodeURIComponent(items[i].bank)}&rekening=${encodeURIComponent(items[i].rekening)}`;
+          res = await fetch(`/api/inquiry${query}`);
+        }
+
+        const data = await safeParseResponse(res);
+
+        const row = {
+          success: data?.success === true,
+          is_valid: data?.is_valid === true,
+          validation_status: data?.validation_status || (data?.is_valid ? "VALID" : "INVALID"),
+          input: data?.input || items[i],
+          normalized: data?.normalized || {},
+          raw: data?.raw || null,
+          error: data?.error || null
+        };
+
+        mergedResults.push(row);
+
+        if (row.validation_status === "VALID") validLive++;
+        else if (row.validation_status === "PARTIAL") partialLive++;
+        else invalidLive++;
+
+        if (i < items.length - 1) {
+          await sleep(REQUEST_DELAY_MS);
+        }
+      }
+
+      renderBulkResults(mode, {
+        success: true,
+        results: mergedResults
+      });
+
+    } catch (err) {
+      renderError(err?.message || "Gagal memproses. Coba lagi nanti.");
+    }
+  });
+
+  updateModeUI();
+  updateInputTypeUI();
+</script>
+</body>
+</html>
