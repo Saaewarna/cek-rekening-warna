@@ -21,22 +21,21 @@ export default async function handler(req, res) {
       clientIp = clientIp.split(',')[0].trim();
     }
 
-    console.log(`[DEBUG] Request masuk dari IP: ${clientIp}`);
-
     if (!ALLOWED_IPS.includes(clientIp)) {
       return res.status(403).json({
         success: false,
         is_valid: false,
+        validation_status: 'INVALID',
         error: `Akses ditolak, IP kamu (${clientIp}) belum di Whitelist.`,
         your_ip: clientIp,
       });
     }
 
     if (!process.env.RAPIDAPI_KEY) {
-      console.error('[CRITICAL] RAPIDAPI_KEY belum disetting di Vercel!');
       return res.status(500).json({
         success: false,
         is_valid: false,
+        validation_status: 'INVALID',
         error: 'Server Config Error: API Key belum dipasang di Vercel.',
       });
     }
@@ -57,6 +56,7 @@ export default async function handler(req, res) {
         return res.status(400).json({
           success: false,
           is_valid: false,
+          validation_status: 'INVALID',
           error: 'Data e-wallet tidak lengkap.',
           input: { id, provider },
         });
@@ -77,6 +77,7 @@ export default async function handler(req, res) {
         return res.status(400).json({
           success: false,
           is_valid: false,
+          validation_status: 'INVALID',
           error: 'Data bank tidak lengkap.',
           input: { bank, rekening },
         });
@@ -91,6 +92,7 @@ export default async function handler(req, res) {
       return res.status(400).json({
         success: false,
         is_valid: false,
+        validation_status: 'INVALID',
         error: 'Mode tidak valid.',
         input: {},
       });
@@ -100,8 +102,6 @@ export default async function handler(req, res) {
     const timeout = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
 
     try {
-      console.log(`[DEBUG] Fetching URL: ${url}`);
-
       const apiReq = await fetch(url, {
         headers,
         signal: controller.signal,
@@ -112,11 +112,10 @@ export default async function handler(req, res) {
       const contentType = apiReq.headers.get('content-type') || '';
       if (!contentType.includes('application/json')) {
         const text = await apiReq.text();
-        console.error('[API ERROR] Response bukan JSON:', text);
-
         return res.status(502).json({
           success: false,
           is_valid: false,
+          validation_status: 'INVALID',
           input,
           error: 'Provider API mengembalikan response non-JSON.',
           raw_text: text,
@@ -129,14 +128,16 @@ export default async function handler(req, res) {
         return res.status(apiReq.status).json({
           success: false,
           is_valid: false,
+          validation_status: 'INVALID',
           input,
           error: raw?.message || raw?.error || 'Gagal validasi dari pusat.',
           raw,
         });
       }
 
-      let normalized = null;
-      let isValid = false;
+      let normalized = {};
+      let validation_status = 'INVALID';
+      let is_valid = false;
 
       if (mode === 'ewallet') {
         const d = raw?.data || raw || {};
@@ -146,8 +147,10 @@ export default async function handler(req, res) {
             d?.name ||
             d?.nama ||
             d?.account_name ||
+            d?.account_holder ||
             d?.owner_name ||
             d?.customer_name ||
+            d?.holder ||
             '',
           nomor:
             d?.account_number ||
@@ -155,6 +158,7 @@ export default async function handler(req, res) {
             d?.number ||
             d?.phone ||
             d?.hp ||
+            d?.accountNo ||
             input.id ||
             '',
           provider:
@@ -170,8 +174,17 @@ export default async function handler(req, res) {
             '',
         };
 
-        isValid = Boolean(normalized.nama && normalized.nomor);
-      } else if (mode === 'bank') {
+        const hasNomor = Boolean(normalized.nomor);
+        const hasNama = Boolean(normalized.nama);
+
+        if (hasNomor && hasNama) {
+          validation_status = 'VALID';
+          is_valid = true;
+        } else if (hasNomor) {
+          validation_status = 'PARTIAL';
+          is_valid = true;
+        }
+      } else {
         const d = raw?.data || raw || {};
 
         normalized = {
@@ -179,14 +192,17 @@ export default async function handler(req, res) {
             d?.nama ||
             d?.name ||
             d?.account_name ||
+            d?.account_holder ||
             d?.owner_name ||
             d?.beneficiary_name ||
+            d?.holder ||
             '',
           nomor:
             d?.no_rekening ||
             d?.account_number ||
             d?.rekening ||
             d?.number ||
+            d?.accountNo ||
             input.rekening ||
             '',
           bank:
@@ -198,16 +214,29 @@ export default async function handler(req, res) {
             '',
         };
 
-        isValid = Boolean(normalized.nama && normalized.nomor);
+        const hasNomor = Boolean(normalized.nomor);
+        const hasNama = Boolean(normalized.nama);
+
+        if (hasNomor && hasNama) {
+          validation_status = 'VALID';
+          is_valid = true;
+        } else if (hasNomor) {
+          validation_status = 'PARTIAL';
+          is_valid = true;
+        }
       }
 
       return res.status(200).json({
         success: true,
-        is_valid: isValid,
+        is_valid,
+        validation_status,
         input,
         normalized,
         raw,
-        error: isValid ? null : 'Data validasi tidak cocok dengan format yang dikenali.',
+        error:
+          validation_status === 'INVALID'
+            ? 'Data validasi tidak cocok dengan format yang dikenali.'
+            : null,
       });
     } catch (fetchError) {
       clearTimeout(timeout);
@@ -235,17 +264,10 @@ export default async function handler(req, res) {
         friendlyError = 'Koneksi socket ke provider terputus.';
       }
 
-      console.error('[FETCH ERROR DETAIL]', {
-        name: errorName,
-        message: errorMessage,
-        mode,
-        input,
-        url,
-      });
-
       return res.status(502).json({
         success: false,
         is_valid: false,
+        validation_status: 'INVALID',
         input,
         error: friendlyError,
         debug: {
@@ -255,10 +277,10 @@ export default async function handler(req, res) {
       });
     }
   } catch (err) {
-    console.error('[SERVER ERROR]', err);
     return res.status(500).json({
       success: false,
       is_valid: false,
+      validation_status: 'INVALID',
       error: `Internal Error: ${err.message}`,
     });
   }
