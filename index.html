@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="id">
 <head>
@@ -176,7 +175,6 @@
             </div>
           </div>
         </div>
-
       </div>
     </div>
   </div>
@@ -265,7 +263,7 @@
     `;
   }
 
-  function renderProgress(current, total, text = "Sedang memproses...", successCount = 0, failedCount = 0) {
+  function renderProgress(current, total, text = "Sedang memproses...", foundCount = 0, invalidCount = 0) {
     summaryBox.classList.add("hidden");
     summaryBox.innerHTML = "";
     exportXlsxBtn.classList.add("hidden");
@@ -297,12 +295,12 @@
               <div class="text-lg font-extrabold text-slate-800">${total}</div>
             </div>
             <div class="bg-emerald-50 rounded-2xl p-3 border border-emerald-100">
-              <div class="text-[11px] uppercase font-bold text-emerald-500">Sukses</div>
-              <div class="text-lg font-extrabold text-emerald-700">${successCount}</div>
+              <div class="text-[11px] uppercase font-bold text-emerald-500">Ditemukan</div>
+              <div class="text-lg font-extrabold text-emerald-700">${foundCount}</div>
             </div>
             <div class="bg-red-50 rounded-2xl p-3 border border-red-100">
-              <div class="text-[11px] uppercase font-bold text-red-500">Gagal</div>
-              <div class="text-lg font-extrabold text-red-700">${failedCount}</div>
+              <div class="text-[11px] uppercase font-bold text-red-500">Invalid</div>
+              <div class="text-lg font-extrabold text-red-700">${invalidCount}</div>
             </div>
             <div class="bg-slate-50 rounded-2xl p-3 border border-slate-100">
               <div class="text-[11px] uppercase font-bold text-slate-400">Sisa</div>
@@ -351,14 +349,7 @@
 
   function getValidationStatus(item) {
     if (!item) return "INVALID";
-    if (item.validation_status) return item.validation_status;
-    if (item.is_valid) return "VALID";
-    return "INVALID";
-  }
-
-  function isRealValidResult(item) {
-    const status = getValidationStatus(item);
-    return status === "VALID" || status === "PARTIAL";
+    return item.validation_status || (item.is_valid ? "VALID" : "INVALID");
   }
 
   function buildExportRows(mode, results) {
@@ -370,7 +361,7 @@
         return {
           No: index + 1,
           Status: status,
-          Provider: item?.input?.provider || normalized.provider || "",
+          Provider: normalized.provider || item?.input?.provider || "",
           Nomor: normalized.nomor || item?.input?.id || "",
           Nama: normalized.nama || "",
           Wallet: normalized.provider || "",
@@ -409,12 +400,13 @@
     exportXlsxBtn.classList.add("hidden");
     lastBulkExportRows = [];
 
-    const status =
-      data?.validation_status ||
-      (data?.is_valid ? "VALID" : "INVALID");
-    const normalized = data?.normalized || {};
+    console.log("RENDER SINGLE FINAL:", data);
 
-    if (!data?.is_valid || !normalized?.nomor) {
+    const normalized = data?.normalized || {};
+    const isValid = data?.is_valid === true;
+    const status = data?.validation_status || (isValid ? "VALID" : "INVALID");
+
+    if (!isValid) {
       resultBox.innerHTML = `
         <div class="w-full h-full flex items-center justify-center">
           <div class="bg-red-50 border border-red-200 text-red-600 rounded-2xl px-5 py-4 text-center font-semibold animate-result">
@@ -430,6 +422,12 @@
         ? `<span class="px-3 py-1 rounded-full bg-emerald-100 text-emerald-700 text-xs font-bold">VALID</span>`
         : `<span class="px-3 py-1 rounded-full bg-amber-100 text-amber-700 text-xs font-bold">PARTIAL</span>`;
 
+    const iconBg =
+      status === "VALID" ? "bg-emerald-100" : "bg-amber-100";
+
+    const icon =
+      status === "VALID" ? "✅" : "⚠️";
+
     const titleText =
       status === "VALID" ? "Data Valid" : "Data Ditemukan";
 
@@ -438,15 +436,13 @@
         ? "Data cocok dan lengkap"
         : "Nomor ditemukan, tapi nama tidak lengkap dari provider";
 
-    let html = "";
-
     if (mode === "ewallet") {
-      html = `
+      resultBox.innerHTML = `
         <div class="w-full max-w-xl mx-auto bg-white rounded-3xl border border-slate-200 p-6 shadow-sm animate-result">
           <div class="flex items-center justify-between gap-3 mb-5">
             <div class="flex items-center gap-3">
-              <div class="w-12 h-12 rounded-2xl ${status === "VALID" ? "bg-emerald-100" : "bg-amber-100"} flex items-center justify-center text-2xl">
-                ${status === "VALID" ? "✅" : "⚠️"}
+              <div class="w-12 h-12 rounded-2xl ${iconBg} flex items-center justify-center text-2xl">
+                ${icon}
               </div>
               <div>
                 <h3 class="font-extrabold text-slate-800 text-lg">${titleText}</h3>
@@ -472,41 +468,40 @@
           </div>
         </div>
       `;
-    } else {
-      html = `
-        <div class="w-full max-w-xl mx-auto bg-white rounded-3xl border border-slate-200 p-6 shadow-sm animate-result">
-          <div class="flex items-center justify-between gap-3 mb-5">
-            <div class="flex items-center gap-3">
-              <div class="w-12 h-12 rounded-2xl ${status === "VALID" ? "bg-emerald-100" : "bg-amber-100"} flex items-center justify-center text-2xl">
-                ${status === "VALID" ? "✅" : "⚠️"}
-              </div>
-              <div>
-                <h3 class="font-extrabold text-slate-800 text-lg">${titleText}</h3>
-                <p class="text-sm text-slate-500">${subtitleText}</p>
-              </div>
-            </div>
-            ${badge}
-          </div>
-
-          <div class="space-y-3">
-            <div class="flex justify-between gap-4 border-b border-slate-100 pb-3">
-              <span class="text-xs uppercase font-bold text-slate-400">Nama</span>
-              <span class="text-slate-800 font-bold text-right">${escapeHtml(normalized.nama || "-")}</span>
-            </div>
-            <div class="flex justify-between gap-4 border-b border-slate-100 pb-3">
-              <span class="text-xs uppercase font-bold text-slate-400">Rekening</span>
-              <span class="text-slate-600 text-right">${escapeHtml(normalized.nomor || "-")}</span>
-            </div>
-            <div class="flex justify-between gap-4">
-              <span class="text-xs uppercase font-bold text-slate-400">Bank</span>
-              <span class="text-blue-600 font-bold text-sm uppercase text-right">${escapeHtml(normalized.bank || "-")}</span>
-            </div>
-          </div>
-        </div>
-      `;
+      return;
     }
 
-    resultBox.innerHTML = html;
+    resultBox.innerHTML = `
+      <div class="w-full max-w-xl mx-auto bg-white rounded-3xl border border-slate-200 p-6 shadow-sm animate-result">
+        <div class="flex items-center justify-between gap-3 mb-5">
+          <div class="flex items-center gap-3">
+            <div class="w-12 h-12 rounded-2xl ${iconBg} flex items-center justify-center text-2xl">
+              ${icon}
+            </div>
+            <div>
+              <h3 class="font-extrabold text-slate-800 text-lg">${titleText}</h3>
+              <p class="text-sm text-slate-500">${subtitleText}</p>
+            </div>
+          </div>
+          ${badge}
+        </div>
+
+        <div class="space-y-3">
+          <div class="flex justify-between gap-4 border-b border-slate-100 pb-3">
+            <span class="text-xs uppercase font-bold text-slate-400">Nama</span>
+            <span class="text-slate-800 font-bold text-right">${escapeHtml(normalized.nama || "-")}</span>
+          </div>
+          <div class="flex justify-between gap-4 border-b border-slate-100 pb-3">
+            <span class="text-xs uppercase font-bold text-slate-400">Rekening</span>
+            <span class="text-slate-600 text-right">${escapeHtml(normalized.nomor || "-")}</span>
+          </div>
+          <div class="flex justify-between gap-4">
+            <span class="text-xs uppercase font-bold text-slate-400">Bank</span>
+            <span class="text-blue-600 font-bold text-sm uppercase text-right">${escapeHtml(normalized.bank || "-")}</span>
+          </div>
+        </div>
+      </div>
+    `;
   }
 
   function getBulkItemLabel(mode, input, normalized = {}) {
@@ -734,115 +729,114 @@
     `;
   });
 
-document.getElementById("paymentForm").addEventListener("submit", async (e) => {
-  e.preventDefault();
+  document.getElementById("paymentForm").addEventListener("submit", async (e) => {
+    e.preventDefault();
 
-  const inputType = inputTypeSelect.value;
-  const mode = modeSelect.value;
-  const provider = document.getElementById("provider").value;
-  const bank = document.getElementById("bank").value;
+    const inputType = inputTypeSelect.value;
+    const mode = modeSelect.value;
+    const provider = document.getElementById("provider").value;
+    const bank = document.getElementById("bank").value;
 
-  try {
-    if (inputType === "single") {
-      const id = idInput.value.trim();
+    try {
+      if (inputType === "single") {
+        const id = idInput.value.trim();
 
-      if (!id) {
-        renderError("Masukkan datanya dulu ya.");
+        if (!id) {
+          renderError("Masukkan datanya dulu ya.");
+          return;
+        }
+
+        renderLoading("Sedang memproses single check...");
+
+        let query = `?mode=${encodeURIComponent(mode)}`;
+        if (mode === "ewallet") {
+          query += `&id=${encodeURIComponent(id)}&provider=${encodeURIComponent(provider)}`;
+        } else {
+          query += `&bank=${encodeURIComponent(bank)}&rekening=${encodeURIComponent(id)}`;
+        }
+
+        const res = await fetch(`/api/inquiry${query}`);
+        const data = await safeParseResponse(res);
+
+        console.log("DEBUG SINGLE RESPONSE:", data);
+
+        if (!res.ok || !data) {
+          renderError(
+            data?.debug?.message
+              ? `${data?.error || "Gagal cek data."} (${data.debug.message})`
+              : (data?.error || "Gagal cek data.")
+          );
+          return;
+        }
+
+        renderSingleResult(mode, data);
         return;
       }
 
-      renderLoading("Sedang memproses single check...");
+      const items = getBulkItems();
+      const mergedResults = [];
+      let validLive = 0;
+      let partialLive = 0;
+      let invalidLive = 0;
 
-      let query = `?mode=${encodeURIComponent(mode)}`;
-      if (mode === "ewallet") {
-        query += `&id=${encodeURIComponent(id)}&provider=${encodeURIComponent(provider)}`;
-      } else {
-        query += `&bank=${encodeURIComponent(bank)}&rekening=${encodeURIComponent(id)}`;
-      }
+      renderProgress(0, items.length, "Menyiapkan proses bulk...", validLive + partialLive, invalidLive);
+      await sleep(400);
 
-      const res = await fetch(`/api/inquiry${query}`);
-      const data = await safeParseResponse(res);
-
-      console.log("DEBUG SINGLE RESPONSE:", data);
-
-      if (!res.ok || !data) {
-        renderError(
-          data?.debug?.message
-            ? `${data?.error || "Gagal cek data."} (${data.debug.message})`
-            : (data?.error || "Gagal cek data.")
+      for (let i = 0; i < items.length; i++) {
+        renderProgress(
+          i + 1,
+          items.length,
+          `Sedang cek data ke-${i + 1}...`,
+          validLive + partialLive,
+          invalidLive
         );
-        return;
+
+        let res;
+        if (mode === "ewallet") {
+          const query = `?mode=ewallet&id=${encodeURIComponent(items[i].id)}&provider=${encodeURIComponent(items[i].provider)}`;
+          res = await fetch(`/api/inquiry${query}`);
+        } else {
+          const query = `?mode=bank&bank=${encodeURIComponent(items[i].bank)}&rekening=${encodeURIComponent(items[i].rekening)}`;
+          res = await fetch(`/api/inquiry${query}`);
+        }
+
+        const data = await safeParseResponse(res);
+
+        const row = {
+          success: data?.success === true,
+          is_valid: data?.is_valid === true,
+          validation_status: data?.validation_status || (data?.is_valid ? "VALID" : "INVALID"),
+          input: data?.input || items[i],
+          normalized: data?.normalized || {},
+          raw: data?.raw || null,
+          error: data?.error || null
+        };
+
+        mergedResults.push(row);
+
+        if (row.validation_status === "VALID") {
+          validLive++;
+        } else if (row.validation_status === "PARTIAL") {
+          partialLive++;
+        } else {
+          invalidLive++;
+        }
+
+        if (i < items.length - 1) {
+          await sleep(REQUEST_DELAY_MS);
+        }
       }
 
-      renderSingleResult(mode, data);
-      return;
+      renderBulkResults(mode, {
+        success: true,
+        results: mergedResults
+      });
+
+    } catch (err) {
+      renderError(err?.message || "Gagal memproses. Coba lagi nanti.");
     }
+  });
 
-    // BULK MODE
-    const items = getBulkItems();
-    const mergedResults = [];
-    let validLive = 0;
-    let partialLive = 0;
-    let invalidLive = 0;
-
-    renderProgress(0, items.length, "Menyiapkan proses bulk...", validLive + partialLive, invalidLive);
-    await sleep(400);
-
-    for (let i = 0; i < items.length; i++) {
-      renderProgress(
-        i + 1,
-        items.length,
-        `Sedang cek data ke-${i + 1}...`,
-        validLive + partialLive,
-        invalidLive
-      );
-
-      let res;
-      if (mode === "ewallet") {
-        const query = `?mode=ewallet&id=${encodeURIComponent(items[i].id)}&provider=${encodeURIComponent(items[i].provider)}`;
-        res = await fetch(`/api/inquiry${query}`);
-      } else {
-        const query = `?mode=bank&bank=${encodeURIComponent(items[i].bank)}&rekening=${encodeURIComponent(items[i].rekening)}`;
-        res = await fetch(`/api/inquiry${query}`);
-      }
-
-      const data = await safeParseResponse(res);
-
-      const row = {
-        success: data?.success === true,
-        is_valid: data?.is_valid === true,
-        validation_status: data?.validation_status || (data?.is_valid ? "VALID" : "INVALID"),
-        input: data?.input || items[i],
-        normalized: data?.normalized || {},
-        raw: data?.raw || null,
-        error: data?.error || null
-      };
-
-      mergedResults.push(row);
-
-      if (row.validation_status === "VALID") {
-        validLive++;
-      } else if (row.validation_status === "PARTIAL") {
-        partialLive++;
-      } else {
-        invalidLive++;
-      }
-
-      if (i < items.length - 1) {
-        await sleep(REQUEST_DELAY_MS);
-      }
-    }
-
-    renderBulkResults(mode, {
-      success: true,
-      results: mergedResults
-    });
-
-  } catch (err) {
-    renderError(err?.message || "Gagal memproses. Coba lagi nanti.");
-  }
-});
-  
   updateModeUI();
   updateInputTypeUI();
 </script>
