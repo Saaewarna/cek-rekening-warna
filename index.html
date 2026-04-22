@@ -137,8 +137,8 @@
             </div>
 
             <div class="grid grid-cols-2 gap-3">
-              <button type="submit" class="group relative w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 rounded-2xl shadow-lg shadow-blue-200 active:scale-[0.98] overflow-hidden">
-                <span class="relative z-10">Cek Sekarang</span>
+              <button type="submit" id="submitBtn" class="group relative w-full bg-blue-600 hover:bg-blue-700 disabled:bg-blue-300 disabled:cursor-not-allowed text-white font-bold py-4 rounded-2xl shadow-lg shadow-blue-200 active:scale-[0.98] overflow-hidden">
+                <span class="relative z-10" id="submitBtnText">Cek Sekarang</span>
               </button>
 
               <button type="button" id="clearBtn" class="w-full bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold py-4 rounded-2xl border border-slate-200 active:scale-[0.98]">
@@ -196,10 +196,23 @@
   const clearBtn = document.getElementById("clearBtn");
   const fillExampleBtn = document.getElementById("fillExampleBtn");
   const exportXlsxBtn = document.getElementById("exportXlsxBtn");
+  const submitBtn = document.getElementById("submitBtn");
+  const submitBtnText = document.getElementById("submitBtnText");
 
   const MAX_TOTAL_BULK = 30;
   const REQUEST_DELAY_MS = 2000;
   let lastBulkExportRows = [];
+
+  // ─── FIX: Request ID untuk cegah race condition ───────────────────────────
+  // Setiap kali submit, currentRequestId di-increment.
+  // Response yang masuk hanya diproses kalau requestId-nya masih cocok.
+  let currentRequestId = 0;
+
+  function setLoading(isLoading) {
+    submitBtn.disabled = isLoading;
+    submitBtnText.textContent = isLoading ? "Memproses..." : "Cek Sekarang";
+  }
+  // ──────────────────────────────────────────────────────────────────────────
 
   function escapeHtml(value) {
     return String(value ?? "")
@@ -347,10 +360,22 @@
     return `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}_${pad(now.getHours())}-${pad(now.getMinutes())}-${pad(now.getSeconds())}`;
   }
 
+  // ─── FIX: isItemValid — robust check, tidak bergantung strict === true ───
+  function isItemValid(item) {
+    if (!item) return false;
+    // Cek is_valid (bisa boolean true atau truthy value lain)
+    if (item.is_valid) return true;
+    // Fallback: cek validation_status
+    const vs = (item.validation_status || "").toUpperCase();
+    if (vs === "VALID" || vs === "PARTIAL") return true;
+    return false;
+  }
+
   function getValidationStatus(item) {
     if (!item) return "INVALID";
     return item.validation_status || (item.is_valid ? "VALID" : "INVALID");
   }
+  // ──────────────────────────────────────────────────────────────────────────
 
   function buildExportRows(mode, results) {
     return results.map((item, index) => {
@@ -403,8 +428,11 @@
     console.log("RENDER SINGLE FINAL:", data);
 
     const normalized = data?.normalized || {};
-    const isValid = data?.is_valid === true;
+
+    // ─── FIX: Gunakan isItemValid() yang robust ──────────────────────────────
+    const isValid = isItemValid(data);
     const status = data?.validation_status || (isValid ? "VALID" : "INVALID");
+    // ────────────────────────────────────────────────────────────────────────
 
     if (!isValid) {
       resultBox.innerHTML = `
@@ -721,6 +749,7 @@
     summaryBox.innerHTML = "";
     exportXlsxBtn.classList.add("hidden");
     lastBulkExportRows = [];
+    setLoading(false);
     resultBox.innerHTML = `
       <div class="text-center">
         <div class="text-5xl mb-3">🔍</div>
@@ -732,10 +761,16 @@
   document.getElementById("paymentForm").addEventListener("submit", async (e) => {
     e.preventDefault();
 
+    // ─── FIX: Increment request ID — invalidate semua request sebelumnya ──
+    const myRequestId = ++currentRequestId;
+    // ────────────────────────────────────────────────────────────────────────
+
     const inputType = inputTypeSelect.value;
     const mode = modeSelect.value;
     const provider = document.getElementById("provider").value;
     const bank = document.getElementById("bank").value;
+
+    setLoading(true);
 
     try {
       if (inputType === "single") {
@@ -743,6 +778,7 @@
 
         if (!id) {
           renderError("Masukkan datanya dulu ya.");
+          setLoading(false);
           return;
         }
 
@@ -756,7 +792,19 @@
         }
 
         const res = await fetch(`/api/inquiry${query}`);
+
+        // ─── FIX: Cek apakah request ini masih relevan ───────────────────
+        if (myRequestId !== currentRequestId) {
+          console.log(`Request #${myRequestId} diabaikan (sudah ada request lebih baru).`);
+          return;
+        }
+        // ──────────────────────────────────────────────────────────────────
+
         const data = await safeParseResponse(res);
+
+        // ─── FIX: Cek lagi setelah parse (async gap) ────────────────────
+        if (myRequestId !== currentRequestId) return;
+        // ──────────────────────────────────────────────────────────────────
 
         console.log("DEBUG SINGLE RESPONSE:", data);
 
@@ -783,6 +831,13 @@
       await sleep(400);
 
       for (let i = 0; i < items.length; i++) {
+        // ─── FIX: Cek request ID di setiap iterasi bulk ─────────────────
+        if (myRequestId !== currentRequestId) {
+          console.log(`Bulk request #${myRequestId} dihentikan di iterasi ${i}.`);
+          return;
+        }
+        // ──────────────────────────────────────────────────────────────────
+
         renderProgress(
           i + 1,
           items.length,
@@ -800,11 +855,15 @@
           res = await fetch(`/api/inquiry${query}`);
         }
 
+        if (myRequestId !== currentRequestId) return;
+
         const data = await safeParseResponse(res);
+
+        if (myRequestId !== currentRequestId) return;
 
         const row = {
           success: data?.success === true,
-          is_valid: data?.is_valid === true,
+          is_valid: data?.is_valid,
           validation_status: data?.validation_status || (data?.is_valid ? "VALID" : "INVALID"),
           input: data?.input || items[i],
           normalized: data?.normalized || {},
@@ -814,9 +873,10 @@
 
         mergedResults.push(row);
 
-        if (row.validation_status === "VALID") {
+        const status = getValidationStatus(row);
+        if (status === "VALID") {
           validLive++;
-        } else if (row.validation_status === "PARTIAL") {
+        } else if (status === "PARTIAL") {
           partialLive++;
         } else {
           invalidLive++;
@@ -827,13 +887,22 @@
         }
       }
 
+      if (myRequestId !== currentRequestId) return;
+
       renderBulkResults(mode, {
         success: true,
         results: mergedResults
       });
 
     } catch (err) {
+      if (myRequestId !== currentRequestId) return;
       renderError(err?.message || "Gagal memproses. Coba lagi nanti.");
+    } finally {
+      // ─── FIX: Re-enable tombol hanya untuk request yang paling baru ──
+      if (myRequestId === currentRequestId) {
+        setLoading(false);
+      }
+      // ──────────────────────────────────────────────────────────────────
     }
   });
 
