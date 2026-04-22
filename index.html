@@ -339,19 +339,20 @@
     `;
   }
 
-  async function safeParseResponse(res) {
-    const contentType = res.headers.get("content-type") || "";
-    const rawText = await res.text();
+  // Fetch helper — langsung pakai res.json(), cache: no-store
+  async function fetchInquiry(query) {
+    const url = `/api/inquiry${query}&_t=${Date.now()}`;
+    const res = await fetch(url, { cache: 'no-store' });
 
-    if (contentType.includes("application/json")) {
-      try {
-        return JSON.parse(rawText);
-      } catch {
-        throw new Error("Response JSON rusak / tidak valid.");
-      }
+    let data;
+    try {
+      data = await res.json();
+    } catch (e) {
+      // Kalau parse gagal, baca raw text untuk debug
+      throw new Error(`Response bukan JSON valid (status ${res.status}).`);
     }
 
-    throw new Error(rawText || `HTTP ${res.status} ${res.statusText}`);
+    return { res, data };
   }
 
   function formatDateTimeForFilename() {
@@ -435,10 +436,17 @@
     // ────────────────────────────────────────────────────────────────────────
 
     if (!isValid) {
+      // Debug: tampilkan raw data yang diterima JS buat diagnosa
+      const debugInfo = `is_valid=${JSON.stringify(data?.is_valid)} | validation_status=${JSON.stringify(data?.validation_status)} | success=${JSON.stringify(data?.success)}`;
       resultBox.innerHTML = `
         <div class="w-full h-full flex items-center justify-center">
-          <div class="bg-red-50 border border-red-200 text-red-600 rounded-2xl px-5 py-4 text-center font-semibold animate-result">
-            ❌ ${escapeHtml(data?.error || "Tidak ditemukan atau tidak valid.")}
+          <div class="space-y-3 text-center w-full max-w-xl mx-auto">
+            <div class="bg-red-50 border border-red-200 text-red-600 rounded-2xl px-5 py-4 font-semibold animate-result">
+              ❌ ${escapeHtml(data?.error || "Tidak ditemukan atau tidak valid.")}
+            </div>
+            <div class="bg-slate-100 border border-slate-200 text-slate-500 rounded-xl px-4 py-2 text-xs font-mono text-left break-all">
+              🐞 DEBUG: ${escapeHtml(debugInfo)}
+            </div>
           </div>
         </div>
       `;
@@ -791,29 +799,37 @@
           query += `&bank=${encodeURIComponent(bank)}&rekening=${encodeURIComponent(id)}`;
         }
 
-        const res = await fetch(`/api/inquiry${query}`);
+        let res, data;
+        try {
+          ({ res, data } = await fetchInquiry(query));
+        } catch (fetchErr) {
+          if (myRequestId !== currentRequestId) return;
+          renderError(fetchErr.message || "Gagal connect ke server.");
+          return;
+        }
 
         // ─── FIX: Cek apakah request ini masih relevan ───────────────────
         if (myRequestId !== currentRequestId) {
-          console.log(`Request #${myRequestId} diabaikan (sudah ada request lebih baru).`);
+          console.log(`Request #${myRequestId} diabaikan.`);
           return;
         }
         // ──────────────────────────────────────────────────────────────────
 
-        const data = await safeParseResponse(res);
+        // Debug: log SEMUA field penting ke console
+        console.log("=== DEBUG RESPONSE ===");
+        console.log("HTTP status:", res.status, "ok:", res.ok);
+        console.log("data:", JSON.stringify(data));
+        console.log("data.is_valid:", data?.is_valid, "| type:", typeof data?.is_valid);
+        console.log("data.validation_status:", data?.validation_status);
+        console.log("======================");
 
-        // ─── FIX: Cek lagi setelah parse (async gap) ────────────────────
-        if (myRequestId !== currentRequestId) return;
-        // ──────────────────────────────────────────────────────────────────
+        if (!res.ok) {
+          renderError(data?.error || `Server error (${res.status})`);
+          return;
+        }
 
-        console.log("DEBUG SINGLE RESPONSE:", data);
-
-        if (!res.ok || !data) {
-          renderError(
-            data?.debug?.message
-              ? `${data?.error || "Gagal cek data."} (${data.debug.message})`
-              : (data?.error || "Gagal cek data.")
-          );
+        if (!data) {
+          renderError("Response kosong dari server.");
           return;
         }
 
@@ -846,20 +862,14 @@
           invalidLive
         );
 
-        let res;
+        let res, data;
         if (mode === "ewallet") {
           const query = `?mode=ewallet&id=${encodeURIComponent(items[i].id)}&provider=${encodeURIComponent(items[i].provider)}`;
-          res = await fetch(`/api/inquiry${query}`);
+          ({ res, data } = await fetchInquiry(query));
         } else {
           const query = `?mode=bank&bank=${encodeURIComponent(items[i].bank)}&rekening=${encodeURIComponent(items[i].rekening)}`;
-          res = await fetch(`/api/inquiry${query}`);
+          ({ res, data } = await fetchInquiry(query));
         }
-
-        if (myRequestId !== currentRequestId) return;
-
-        const data = await safeParseResponse(res);
-
-        if (myRequestId !== currentRequestId) return;
 
         const row = {
           success: data?.success === true,
