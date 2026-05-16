@@ -8,7 +8,8 @@ export default async function handler(req, res) {
     '96.9.95.126',
     '93.185.162.116',
     '111.90.188.192',
-    '38.47.33.26'
+    '38.47.33.26',
+    '154.50.17.51'
   ];
 
   const FETCH_TIMEOUT_MS = 8000;
